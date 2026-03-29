@@ -32,9 +32,14 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
     let initialQuestion: Question | null = null;
     if (lastAgentMessage) {
-      const parsedOptions = lastAgentMessage.options
-        ? (JSON.parse(lastAgentMessage.options) as string[])
-        : null;
+      let parsedOptions: string[] | null = null;
+      if (lastAgentMessage.options) {
+        try {
+          parsedOptions = JSON.parse(lastAgentMessage.options) as string[];
+        } catch {
+          parsedOptions = null;
+        }
+      }
 
       initialQuestion = {
         question: lastAgentMessage.content,

@@ -18,8 +18,9 @@
 | AI Provider (메인) | OpenRouter | `@openrouter/ai-sdk-provider` |
 | AI Provider (시뮬레이션) | Cerebras | OpenAI-compatible API |
 | 웹 검색/스크래핑 | Firecrawl | `firecrawl` (REST API) |
-| UI 컴포넌트 | 21st.dev Magic MCP | |
+| UI 컴포넌트 | 21st.dev Magic MCP | `/ui` 명령으로 생성 |
 | 스타일 | Tailwind CSS | |
+| 한국어 폰트 | Pretendard | `next/font/local` 또는 CDN |
 
 ## AI 모델 배치
 
@@ -92,7 +93,7 @@ FIRECRAWL_API_KEY=...
 | project_id | text | FK → projects |
 | role | text | `agent` / `user` |
 | content | text | 메시지 본문 |
-| input_type | text | nullable. `choice` / `text` / `yesno` |
+| input_type | text | nullable. `choice` / `text` / `yesno` / `file` |
 | options | text | nullable. JSON string. 선택지 배열 (마지막은 항상 "기타") |
 | created_at | integer | unix timestamp |
 
@@ -139,6 +140,44 @@ Deliver에서 수정 요청 시 제시되는 선택지.
 | custom_input | text | nullable. "기타"로 직접 입력한 경우 |
 | created_at | integer | unix timestamp |
 
+### uploaded_files
+
+Collect에서 유저가 업로드한 파일.
+
+| Column | Type | Note |
+|--------|------|------|
+| id | text (nanoid) | PK |
+| project_id | text | FK → projects |
+| message_id | text | FK → messages. 어떤 질문에 대한 응답으로 업로드했는지 |
+| filename | text | 원본 파일명 |
+| mime_type | text | e.g. `image/png`, `application/pdf` |
+| file_path | text | 저장 경로 (`uploads/[projectId]/[fileId].[ext]`) |
+| extracted_text | text | nullable. 파일에서 추출한 텍스트 (PDF, 문서 등) |
+| analysis | text | nullable. 이미지 분석 결과 (Vision API) |
+| created_at | integer | unix timestamp |
+
+### 파일 처리 방식
+
+| MIME 타입 | 처리 | 컨텍스트 활용 |
+|----------|------|-------------|
+| `image/*` (jpg, png, webp) | 썸네일 미리보기 + Vision API로 내용 분석 | `analysis` 필드를 context에 주입 |
+| `application/pdf` | 텍스트 추출 (pdf-parse) | `extracted_text`를 context에 주입 |
+| `text/*`, `.md`, `.docx` | 내용 읽기 | `extracted_text`를 context에 주입 |
+| 기타 | 저장만 (분석 없음) | 파일명만 context에 포함 |
+
+### 파일 저장 경로
+
+```
+uploads/
+  [projectId]/
+    [fileId].png
+    [fileId].pdf
+```
+
+- `uploads/` 디렉토리는 gitignored
+- 로컬: 프로젝트 루트 `uploads/`
+- 프로덕션: `/app/data/uploads/`
+
 ## Pages & Routes
 
 ### `/` — Screen 0: Landing
@@ -161,6 +200,12 @@ project.phase에 따라 화면 전환 (fade/slide 애니메이션):
     - `choice`: 큰 카드 버튼 (세로 나열) + 마지막에 "기타 (직접 입력)" 카드
     - `text`: 큰 텍스트에어리어
     - `yesno`: 토글 버튼 2개
+    - `file`: 드래그앤드롭 영역 + 파일 선택 버튼 (이미지, PDF, 문서 등)
+  - 파일 업로드 시 파일 타입별 처리:
+    - 이미지 (jpg/png/webp): 썸네일 미리보기 + Vision API로 내용 분석
+    - PDF: 텍스트 추출 → 컨텍스트로 활용
+    - 텍스트 (txt/md/docx): 내용 읽어서 컨텍스트로 활용
+  - 선택지(choice)는 선택해도 화면이 초기화되지 않음 — 선택 상태를 유지하고 확인 버튼으로 다음 질문 진행
   - 하단: [← 이전] / [건너뛰기 →]
 - 오른쪽 패널 (클립보드):
   - "지금까지 파악한 것" 제목
