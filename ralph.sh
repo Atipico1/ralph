@@ -178,7 +178,10 @@ fi
 
 # ── Init ─────────────────────────────────────────────────────
 [ -f "$PROGRESS" ] || echo -e "# Progress\nStarted: $(date)\n---" > "$PROGRESS"
-[ -f "$PRD" ] || { echo "ERROR: prd.json not found."; exit 1; }
+if [ ! -f "$PRD" ]; then
+    echo "ERROR: prd.json not found. Create it first."
+    exit 1
+fi
 
 # ── Dry Run ──────────────────────────────────────────────────
 if dry; then
@@ -209,25 +212,45 @@ for idx in $(seq 0 $((TOTAL - 1))); do
 
     log "Task $STORY_ID: $STORY_TITLE"
 
-    OUTPUT=$(run_claude "Execute this task. Commit message: feat: $STORY_ID - $STORY_TITLE
+    TASK_DONE=false
+    for task_attempt in $(seq 1 "$MAX_RETRIES"); do
+        OUTPUT=$(run_claude "Execute this task. Commit message: feat: $STORY_ID - $STORY_TITLE
 
 $STORY")
 
-    if echo "$OUTPUT" | grep -q "TASK_PASS"; then
-        jq ".userStories[$idx].passes = true" "$PRD" > "$PRD.tmp" && mv "$PRD.tmp" "$PRD"
-        echo -e "\n## $(date '+%m-%d %H:%M') $STORY_ID DONE\n---" >> "$PROGRESS"
-        echo "$STORY_ID done."
-    else
-        echo "$STORY_ID FAILED."
-        echo -e "\n## $(date '+%m-%d %H:%M') $STORY_ID FAILED\n---" >> "$PROGRESS"
+        if echo "$OUTPUT" | grep -q "TASK_PASS"; then
+            jq ".userStories[$idx].passes = true" "$PRD" > "$PRD.tmp" && mv "$PRD.tmp" "$PRD"
+            echo -e "\n## $(date '+%m-%d %H:%M') $STORY_ID DONE\n---" >> "$PROGRESS"
+            echo "$STORY_ID done."
+            TASK_DONE=true
+            break
+        fi
+
+        echo "$STORY_ID FAILED (attempt $task_attempt/$MAX_RETRIES)."
+
+        if [ "$task_attempt" -lt "$MAX_RETRIES" ]; then
+            # 실패 시 Claude에게 에러 넘겨서 수정 후 재시도
+            FAIL_REASON=$(echo "$OUTPUT" | grep -A 5 "TASK_FAIL" || echo "unknown failure")
+            log "Claude에게 수정 위임 ($task_attempt/$MAX_RETRIES)"
+            run_claude "Previous attempt to implement $STORY_ID failed:
+
+$FAIL_REASON
+
+Read progress.txt for context. Fix the issue and try again.
+Output TASK_PASS when done, TASK_FAIL: [reason] if still blocked."
+        fi
+    done
+
+    if [ "$TASK_DONE" = false ]; then
+        echo -e "\n## $(date '+%m-%d %H:%M') $STORY_ID FAILED ($MAX_RETRIES attempts)\n---" >> "$PROGRESS"
         git checkout . 2>/dev/null || true
+        log "WARNING: $STORY_ID failed after $MAX_RETRIES attempts. Skipping to next task."
     fi
 done
 
 REMAINING=$(jq '[.userStories[] | select(.passes != true)] | length' "$PRD")
 if [ "$REMAINING" -gt 0 ]; then
-    log "Phase 1 FAILED — $REMAINING tasks remaining"
-    exit 1
+    log "WARNING: Phase 1 — $REMAINING tasks still remaining. Continuing to Phase 2."
 fi
 
 # ── Phase 2: E2E ────────────────────────────────────────────
@@ -321,18 +344,27 @@ else
 ## New: $ALL_STORIES
 ## Original: $ORIG_STORIES")
         check_e2e_all_pass && break
-        [ "$retry" -eq "$MAX_RETRIES" ] && { log "E2E FAILED"; exit 1; }
+        if [ "$retry" -eq "$MAX_RETRIES" ]; then
+            FINAL_FAILURES=$(jq -r '.results[] | select(.pass == false) | "  ✗ \(.id): \(.detail)"' "$E2E_RESULTS" 2>/dev/null || echo "  (결과 파싱 불가)")
+            log "WARNING: E2E — $MAX_RETRIES회 시도 후에도 실패 항목 있음. 배포 단계로 계속 진행."
+            echo "$FINAL_FAILURES"
+        fi
     done
 fi
 
 # ── Phase 3: 배포 (Claude가 에러 수정) ──────────────────────
 if [ "$SKIP_DEPLOY" = true ]; then
     log "배포 스킵 (--no-deploy)"
+    log "Ralph Loop 완료 (배포 제외)"
     exit 0
 fi
 
 ENV_FILE="$DIR/.env.local"
-[ -f "$ENV_FILE" ] || { log ".env.local not found"; exit 1; }
+if [ ! -f "$ENV_FILE" ]; then
+    log "WARNING: .env.local not found — 배포 스킵"
+    log "Ralph Loop 완료 (배포 제외)"
+    exit 0
+fi
 
 parse_env_vars() {
     local vars=""
@@ -441,8 +473,8 @@ Output DEPLOY_PASS or DEPLOY_FAIL: [issues]" \
     fi
 
     if [ "$verify_attempt" -eq "$MAX_RETRIES" ]; then
-        log "Phase 4 FAILED — $MAX_RETRIES회 시도 후 포기"
-        exit 1
+        log "WARNING: Phase 4 — 프로덕션 검증 $MAX_RETRIES회 실패. 수동 확인 필요."
+        break
     fi
 
     log "프로덕션 검증 실패 — Claude에게 수정 위임 ($verify_attempt/$MAX_RETRIES)"

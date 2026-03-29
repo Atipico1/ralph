@@ -9,7 +9,10 @@ Phase 1(태스크 루프)에서 개별 태스크가 통과해도, 전체 플로�
 
 - **agent-browser CLI**: 브라우저 자동화 (스크린샷, DOM 인터랙션, 콘솔 에러 확인)
   - 사용법: `agent-browser --help` 로 확인
-  - 모든 E2E 테스트는 agent-browser CLI를 사용하여 실제 브라우저에서 검증
+  - **headful 모드로 실제 브라우저를 띄워서 테스트** (headless 아님)
+  - 실제로 클릭, 입력, 스크롤, 파일 드래그앤드롭 등 유저 행동을 재현
+  - 모든 E2E/스모크 테스트는 agent-browser CLI를 사용하여 실제 브라우저에서 검증
+  - mock, stub, 시뮬레이션 절대 금지 — 실제 브라우저에서 실제 조작만
 - **로컬 dev 서버**: `npm run dev` (백그라운드)
 
 ## E2E 테스트 흐름
