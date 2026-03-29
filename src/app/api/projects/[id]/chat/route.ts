@@ -10,7 +10,8 @@ import {
 import {
   extractContext,
   shouldEndCollectionEarly,
-  generateNextQuestion,
+  streamNextQuestion,
+  nextQuestionSchema,
 } from '@/ai/collect';
 
 // ── Request schema ──────────────────────────────────────────────────────────
@@ -132,13 +133,15 @@ export async function POST(
         // 5. Check if done (max reached or AI early termination)
         const maxReached = newQuestionCount >= project.maxQuestions;
 
+        // Refresh collected context after new additions (reused below)
+        const allContext = getCollectedContextByProject(id);
+        const contextItems = allContext.map((c) => ({ key: c.key, value: c.value }));
+
         let earlyEnd = false;
         if (!maxReached) {
-          // Refresh collected context after new additions
-          const allContext = getCollectedContextByProject(id);
           earlyEnd = await shouldEndCollectionEarly(
             personaPrompt,
-            allContext.map((c) => ({ key: c.key, value: c.value })),
+            contextItems,
             newQuestionCount,
             project.maxQuestions,
           );
@@ -152,7 +155,7 @@ export async function POST(
           return;
         }
 
-        // 7. Generate next question
+        // 7. Generate next question (streaming)
         const conversationHistory = [
           ...existingMessages.map((m) => ({
             role: m.role as 'agent' | 'user',
@@ -161,14 +164,35 @@ export async function POST(
           { role: 'user' as const, content: message },
         ];
 
-        const allContextForQuestion = getCollectedContextByProject(id);
-        const nextQuestion = await generateNextQuestion(
+        const streamResult = streamNextQuestion(
           personaPrompt,
           conversationHistory,
-          allContextForQuestion.map((c) => ({ key: c.key, value: c.value })),
+          contextItems,
           newQuestionCount,
           project.maxQuestions,
         );
+
+        // Consume stream to completion, then parse structured output
+        const fullText = await streamResult.text;
+        const fallback = {
+          question: '혹시 더 알려주실 내용이 있으신가요?',
+          inputType: 'text' as const,
+          options: null,
+        };
+
+        let nextQuestion: {
+          question: string;
+          inputType: 'choice' | 'text' | 'yesno';
+          options: string[] | null;
+        };
+
+        try {
+          const parsed = JSON.parse(fullText) as unknown;
+          const validated = nextQuestionSchema.safeParse(parsed);
+          nextQuestion = validated.success ? validated.data : fallback;
+        } catch {
+          nextQuestion = fallback;
+        }
 
         // 8. Save agent message
         createMessage({
@@ -181,7 +205,7 @@ export async function POST(
             : null,
         });
 
-        // Send question event
+        // Send final structured question event
         send('question', {
           question: nextQuestion.question,
           inputType: nextQuestion.inputType,

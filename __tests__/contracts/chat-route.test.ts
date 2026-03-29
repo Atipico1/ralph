@@ -23,7 +23,7 @@ vi.mock('@/db/queries', () => ({
 
 const mockExtractContext = vi.fn();
 const mockShouldEndCollectionEarly = vi.fn();
-const mockGenerateNextQuestion = vi.fn();
+const mockStreamNextQuestion = vi.fn();
 
 vi.mock('@/ai/collect', async () => {
   const actual = await vi.importActual<typeof import('@/ai/collect')>('@/ai/collect');
@@ -31,7 +31,7 @@ vi.mock('@/ai/collect', async () => {
     ...actual,
     extractContext: (...args: unknown[]) => mockExtractContext(...args),
     shouldEndCollectionEarly: (...args: unknown[]) => mockShouldEndCollectionEarly(...args),
-    generateNextQuestion: (...args: unknown[]) => mockGenerateNextQuestion(...args),
+    streamNextQuestion: (...args: unknown[]) => mockStreamNextQuestion(...args),
   };
 });
 
@@ -115,10 +115,12 @@ describe('POST /api/projects/[id]/chat (contract tests)', () => {
     mockUpdateProject.mockReturnValue(undefined);
     mockExtractContext.mockResolvedValue({ contexts: [{ key: 'role', value: '백엔드 개발자' }] });
     mockShouldEndCollectionEarly.mockResolvedValue(false);
-    mockGenerateNextQuestion.mockResolvedValue({
-      question: '경력은 얼마나 되시나요?',
-      inputType: 'choice',
-      options: ['1년 미만', '1-3년', '3-5년', '5년 이상', '기타 (직접 입력)'],
+    mockStreamNextQuestion.mockReturnValue({
+      text: Promise.resolve(JSON.stringify({
+        question: '경력은 얼마나 되시나요?',
+        inputType: 'choice',
+        options: ['1년 미만', '1-3년', '3-5년', '5년 이상', '기타 (직접 입력)'],
+      })),
     });
   });
 
@@ -186,7 +188,7 @@ describe('POST /api/projects/[id]/chat (contract tests)', () => {
     const contextData = events[0].data as { contexts: Array<{ key: string; value: string }> };
     expect(contextData.contexts).toEqual([{ key: 'role', value: '백엔드 개발자' }]);
 
-    // Second event: question
+    // Second event: question (structured data)
     expect(events[1].event).toBe('question');
     const questionData = events[1].data as { question: string; inputType: string; options: string[] | null; questionCount: number };
     expect(questionData.question).toBe('경력은 얼마나 되시나요?');

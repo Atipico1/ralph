@@ -1,4 +1,4 @@
-import { generateText, Output, NoObjectGeneratedError } from 'ai';
+import { generateText, streamText, Output, NoObjectGeneratedError } from 'ai';
 import { z } from 'zod';
 import { mainAgentModel } from '@/ai/providers';
 
@@ -132,21 +132,25 @@ export async function shouldEndCollectionEarly(
 }
 
 // ---------------------------------------------------------------------------
-// generateNextQuestion
+// Types
 // ---------------------------------------------------------------------------
 
-interface ConversationMessage {
+export interface ConversationMessage {
   role: 'agent' | 'user';
   content: string;
 }
 
-export async function generateNextQuestion(
+// ---------------------------------------------------------------------------
+// Shared prompt builder
+// ---------------------------------------------------------------------------
+
+function buildQuestionPrompt(
   personaPrompt: string,
   conversationHistory: ConversationMessage[],
   collectedContexts: CollectedContextItem[],
   questionCount: number,
   maxQuestions: number,
-): Promise<NextQuestion> {
+): { system: string; prompt: string } {
   const historyText = conversationHistory
     .map((m) => `${m.role === 'agent' ? '에이전트' : '유저'}: ${m.content}`)
     .join('\n');
@@ -156,11 +160,8 @@ export async function generateNextQuestion(
       ? collectedContexts.map((c) => `- ${c.key}: ${c.value}`).join('\n')
       : '(아직 수집된 정보 없음)';
 
-  try {
-    const { experimental_output: output } = await generateText({
-      model: mainAgentModel(),
-      experimental_output: Output.object({ schema: nextQuestionSchema }),
-      system: `${personaPrompt}
+  return {
+    system: `${personaPrompt}
 
 [질문 생성 규칙]
 - 이전 대화와 수집된 컨텍스트를 바탕으로, 아직 부족한 정보를 물어보는 질문 하나를 생성하세요.
@@ -169,20 +170,37 @@ export async function generateNextQuestion(
 - 질문은 한국어로, 친근하고 전문적인 톤으로 작성하세요.
 - 이전에 물어본 내용과 중복되지 않게 하세요.
 - 현재 ${questionCount}/${maxQuestions} 질문 완료. 남은 질문 수를 고려해서 가장 중요한 것부터 물어보세요.`,
-      prompt: `대화 히스토리:\n${historyText}\n\n수집된 컨텍스트:\n${contextSummary}`,
-    });
+    prompt: `대화 히스토리:\n${historyText}\n\n수집된 컨텍스트:\n${contextSummary}`,
+  };
+}
 
-    if (!output) {
-      return buildFallbackQuestion();
-    }
+// ---------------------------------------------------------------------------
+// streamNextQuestion
+// ---------------------------------------------------------------------------
 
-    return output;
-  } catch (error: unknown) {
-    if (NoObjectGeneratedError.isInstance(error)) {
-      return buildFallbackQuestion();
-    }
-    throw error;
-  }
+export function streamNextQuestion(
+  personaPrompt: string,
+  conversationHistory: ConversationMessage[],
+  collectedContexts: CollectedContextItem[],
+  questionCount: number,
+  maxQuestions: number,
+) {
+  const { system, prompt } = buildQuestionPrompt(
+    personaPrompt,
+    conversationHistory,
+    collectedContexts,
+    questionCount,
+    maxQuestions,
+  );
+
+  const result = streamText({
+    model: mainAgentModel(),
+    experimental_output: Output.object({ schema: nextQuestionSchema }),
+    system,
+    prompt,
+  });
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------
