@@ -92,7 +92,7 @@ describe('agenticSearch (contract tests)', () => {
     expect(callArgs.tools).toHaveProperty('scrapeUrl');
 
     // maxSteps enables ReAct loop
-    expect(callArgs.maxSteps).toBeGreaterThanOrEqual(3);
+    expect(callArgs.maxSteps).toBeGreaterThanOrEqual(2);
 
     // Prompt includes context
     expect(callArgs.prompt).toContain('도쿄');

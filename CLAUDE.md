@@ -1,4 +1,4 @@
-# Ralph
+# ALJALDAKKALSEN
 
 Next.js + TypeScript + SQLite(Drizzle ORM) 프로젝트. 기술 스택은 `infra.md` 참조.
 
@@ -72,7 +72,7 @@ brainstorming → writing-plans → plan-review → subagent-driven-development 
 - `skills/requesting-code-review/code-reviewer.md` — 리뷰어 에이전트 프롬프트
 - `skills/receiving-code-review/SKILL.md` — 리뷰 피드백 수신 방법
 
-## Ralph Loop (자율 실행 모드)
+## ALJALDAKKALSEN Loop (자율 실행 모드)
 
 `ralph.sh`로 실행하면 bash가 태스크 루프를 강제합니다.
 
@@ -179,7 +179,7 @@ npm run test:smoke   # 스모크 테스트 (.env.local 필요, 없으면 자동 
 
 ## 중간 파일 (런타임)
 
-Ralph Loop 실행 시 생성되는 중간 파일. 전부 `.ralph/` 아래 (gitignored).
+ALJALDAKKALSEN Loop 실행 시 생성되는 중간 파일. 전부 `.ralph/` 아래 (gitignored).
 
 | 파일 | 생성 시점 | 소비 시점 | 형식 |
 |------|----------|----------|------|
@@ -197,7 +197,7 @@ Ralph Loop 실행 시 생성되는 중간 파일. 전부 `.ralph/` 아래 (gitig
 
 ## 모델 + 인프라 (절대 변경 금지)
 
-Ralph Loop 서브에이전트: `claude-opus-4-6`
+ALJALDAKKALSEN Loop 서브에이전트: `claude-opus-4-6`
 
 ### 제품 런타임 AI 모델 (spec.md에 정의)
 

@@ -85,6 +85,14 @@ async function readSSEEvents(response: Response): Promise<Array<{ event: string;
 
 // ── Shared project fixture ──────────────────────────────────────────────────
 
+const questionPlan = [
+  { question: '어떤 직무에 지원하시나요?', inputType: 'text', options: null, contextKey: 'job_role' },
+  { question: '현재 경력 상태는 어떠신가요?', inputType: 'text', options: null, contextKey: 'career_status' },
+  { question: '희망 연봉대는 어떻게 되시나요?', inputType: 'text', options: null, contextKey: 'salary' },
+  { question: '경력은 얼마나 되시나요?', inputType: 'choice', options: ['1년 미만', '1-3년', '3-5년', '5년 이상', '기타 (직접 입력)'], contextKey: 'experience' },
+  { question: '선호하는 근무 형태가 있으신가요?', inputType: 'choice', options: ['재택근무', '사무실 출근', '하이브리드', '기타 (직접 입력)'], contextKey: 'work_type' },
+];
+
 const baseProject = {
   id: 'test-id',
   title: 'Test Project',
@@ -93,6 +101,7 @@ const baseProject = {
   phase: 'collect' as const,
   maxQuestions: 10,
   questionCount: 2,
+  questionPlan: JSON.stringify(questionPlan),
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -182,24 +191,24 @@ describe('POST /api/projects/[id]/chat (contract tests)', () => {
 
   // ── Normal flow: continue collecting ─────────────────────────────────────
 
-  it('sends context and question events in normal flow', async () => {
+  it('sends question and context events in normal flow', async () => {
     const response = await POST(makeRequest({ message: '백엔드 개발자입니다' }), makeParams('test-id'));
     const events = await readSSEEvents(response);
 
     expect(events).toHaveLength(2);
 
-    // First event: context
-    expect(events[0].event).toBe('context');
-    const contextData = events[0].data as { contexts: Array<{ key: string; value: string }> };
-    expect(contextData.contexts).toEqual([{ key: 'role', value: '백엔드 개발자' }]);
-
-    // Second event: question (structured data)
-    expect(events[1].event).toBe('question');
-    const questionData = events[1].data as { question: string; inputType: string; options: string[] | null; questionCount: number };
+    // First event: question (sent immediately, before AI extraction)
+    expect(events[0].event).toBe('question');
+    const questionData = events[0].data as { question: string; inputType: string; options: string[] | null; questionCount: number };
     expect(questionData.question).toBe('경력은 얼마나 되시나요?');
     expect(questionData.inputType).toBe('choice');
     expect(questionData.options).toContain('기타 (직접 입력)');
     expect(questionData.questionCount).toBe(3);
+
+    // Second event: context (extracted after question sent)
+    expect(events[1].event).toBe('context');
+    const contextData = events[1].data as { contexts: Array<{ key: string; value: string }> };
+    expect(contextData.contexts).toEqual([{ key: 'role', value: '백엔드 개발자' }]);
   });
 
   it('saves user message to DB', async () => {
@@ -272,10 +281,18 @@ describe('POST /api/projects/[id]/chat (contract tests)', () => {
     expect(mockUpdateProject).toHaveBeenCalledWith('test-id', { phase: 'simulate' });
   });
 
-  // ── Done flow: early termination ──────────────────────────────────────────
+  // ── Done flow: question plan exhausted ──────────────────────────────────────
 
-  it('sends done event when AI decides to end early', async () => {
-    mockShouldEndCollectionEarly.mockResolvedValue(true);
+  it('sends done event when question plan is exhausted', async () => {
+    const shortPlan = [
+      { question: '질문1', inputType: 'text', options: null, contextKey: 'q1' },
+      { question: '질문2', inputType: 'text', options: null, contextKey: 'q2' },
+    ];
+    mockGetProject.mockReturnValue({
+      ...baseProject,
+      questionCount: 1,
+      questionPlan: JSON.stringify(shortPlan),
+    });
     const response = await POST(makeRequest({ message: '모든 정보 드렸어요' }), makeParams('test-id'));
     const events = await readSSEEvents(response);
 

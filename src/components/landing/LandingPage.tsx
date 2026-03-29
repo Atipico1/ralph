@@ -18,19 +18,26 @@ interface CreateProjectResponse {
   };
 }
 
+const SUGGESTIONS = [
+  '자기소개서를 써주세요',
+  '사업계획서를 작성해주세요',
+  '도쿄 3박 4일 여행 계획을 세워주세요',
+];
+
 export default function LandingPage() {
   const router = useRouter();
   const [input, setInput] = useState('');
   const [recentProjects, setRecentProjects] = useState<ProjectChip[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const fetchProjects = useCallback(async () => {
     try {
       const res = await fetch('/api/projects');
       if (!res.ok) return;
       const data: ProjectChip[] = await res.json();
-      setRecentProjects(data.slice(0, 5));
+      setRecentProjects(data.slice(0, 10));
     } catch {
       // Silently ignore — recent projects are non-critical
     }
@@ -73,60 +80,159 @@ export default function LandingPage() {
     }
   }
 
+  function handleSuggestionClick(text: string) {
+    setInput(text);
+  }
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-4">
-      <div className="w-full max-w-2xl space-y-8 text-center">
-        {/* Greeting */}
-        <h1 className="text-3xl font-semibold text-gray-900 sm:text-4xl">
-          안녕하세요! 무엇을 도와드릴까요?
-        </h1>
+    <>
+      {/* Sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm transition-opacity animate-fade-in"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="원하시는 것을 설명해주세요..."
-            rows={4}
-            disabled={isSubmitting}
-            className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50"
-          />
-
-          {/* Error */}
-          {error && (
-            <p className="text-sm text-red-600" role="alert">
-              {error}
-            </p>
-          )}
-
+      {/* Sidebar */}
+      <aside
+        className={`fixed left-0 top-0 z-50 flex h-full w-72 flex-col border-r border-zinc-100 bg-white shadow-2xl shadow-zinc-900/[0.06] transition-transform duration-300 ease-out ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex h-14 items-center justify-between border-b border-zinc-100 px-4">
+          <h2 className="text-[13px] font-semibold uppercase tracking-widest text-zinc-400">History</h2>
           <button
-            type="submit"
-            disabled={isSubmitting || !input.trim()}
-            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-8 py-3 text-base font-medium text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-400 transition-all duration-200 hover:bg-zinc-100 hover:text-zinc-600"
+            aria-label="사이드바 닫기"
           >
-            {isSubmitting ? '처리 중...' : '시작하기'}
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
           </button>
-        </form>
+        </div>
 
-        {/* Recent Projects */}
-        {recentProjects.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm text-gray-500">최근 프로젝트</p>
-            <div className="flex flex-wrap justify-center gap-2">
+        <div className="flex-1 overflow-y-auto p-2">
+          {recentProjects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-2 py-16">
+              <p className="text-[13px] text-zinc-300">
+                아직 프로젝트가 없습니다
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-0.5">
               {recentProjects.map((project) => (
+                <li key={project.id}>
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/project/${project.id}`)}
+                    className="group w-full cursor-pointer rounded-lg px-3 py-2.5 text-left text-[13px] text-zinc-500 transition-all duration-150 hover:bg-zinc-50 hover:text-zinc-900"
+                  >
+                    <span className="line-clamp-2 leading-snug">{project.title}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </aside>
+
+      {/* Main */}
+      <main className="relative flex min-h-screen flex-col items-center justify-center px-4">
+        {/* Background - pure white, clean */}
+        <div className="pointer-events-none absolute inset-0 bg-white" />
+
+        {/* History button (top-left) */}
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          className="fixed left-5 top-5 z-30 flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-zinc-300 transition-all duration-200 hover:text-zinc-600"
+          aria-label="이전 프로젝트 열기"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
+
+        {/* Content */}
+        <div className="relative z-10 w-full max-w-[640px] animate-fade-in-up">
+          {/* Greeting - large, bold, minimal */}
+          <h1 className="mb-2 text-center text-[40px] font-bold leading-[1.15] tracking-[-0.03em] text-zinc-900 sm:text-[52px]">
+            ALJALDAKKALSEN
+          </h1>
+          <p className="mb-12 text-center text-[17px] leading-relaxed text-zinc-400">
+            무엇을 도와드릴까요?
+          </p>
+
+          {/* Input area - clean, no glass card wrapper */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="group relative">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="원하시는 것을 자유롭게 설명해주세요..."
+                rows={4}
+                disabled={isSubmitting}
+                className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-5 py-4 text-[16px] leading-relaxed text-zinc-900 placeholder-zinc-300 shadow-sm transition-all duration-200 focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 disabled:opacity-50"
+              />
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div className="flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3" role="alert">
+                <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                </svg>
+                <p className="text-sm font-medium text-red-700">{error}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting || !input.trim()}
+              className="group relative inline-flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-8 py-4 text-[16px] font-semibold text-white transition-all duration-200 hover:bg-zinc-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
+            >
+              {isSubmitting ? (
+                <>
+                  <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span>처리 중...</span>
+                </>
+              ) : (
+                <>
+                  <span>시작하기</span>
+                  <svg className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                  </svg>
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Suggestions */}
+          <div className="mt-10 space-y-4 animate-fade-in" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+            <p className="text-center text-[12px] font-medium uppercase tracking-[0.15em] text-zinc-300">
+              이런 것도 할 수 있어요
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {SUGGESTIONS.map((text) => (
                 <button
-                  key={project.id}
+                  key={text}
                   type="button"
-                  onClick={() => router.push(`/project/${project.id}`)}
-                  className="rounded-full border border-gray-200 bg-gray-50 px-4 py-1.5 text-sm text-gray-700 transition hover:border-gray-300 hover:bg-gray-100"
+                  onClick={() => handleSuggestionClick(text)}
+                  className="cursor-pointer rounded-full border border-zinc-150 bg-white px-4 py-2 text-[13px] font-medium text-zinc-500 transition-all duration-200 hover:border-zinc-300 hover:text-zinc-900 active:scale-[0.97]"
                 >
-                  {project.title}
+                  {text}
                 </button>
               ))}
             </div>
           </div>
-        )}
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   );
 }

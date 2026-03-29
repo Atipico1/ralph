@@ -1,4 +1,4 @@
-# Ralph SPEC
+# ALJALDAKKALSEN SPEC
 
 ## Overview
 

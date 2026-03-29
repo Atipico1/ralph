@@ -1,7 +1,7 @@
 # DiceBear Docs
 
 오픈소스 아바타 라이브러리. SVG 출력, TypeScript 지원, 30+ 스타일.
-Ralph UI에서 에이전트 캐릭터 표현에 사용 가능.
+ALJALDAKKALSEN UI에서 에이전트 캐릭터 표현에 사용 가능.
 
 ## Docs
 
@@ -49,7 +49,7 @@ const dataUri = avatar.toDataUri();   // data:image/svg+xml;... (img src용)
 
 ## avataaars 스타일 — 표정 파라미터
 
-Ralph 에이전트 캐릭터에 추천. phase별 상태 표현 가능.
+ALJALDAKKALSEN 에이전트 캐릭터에 추천. phase별 상태 표현 가능.
 
 ### eyes
 
@@ -63,7 +63,7 @@ Ralph 에이전트 캐릭터에 추천. phase별 상태 표현 가능.
 
 `concerned` `default` `disbelief` `eating` `grimace` `sad` `screamOpen` `serious` `smile` `tongue` `twinkle` `vomit`
 
-### Ralph phase별 표정 매핑 예시
+### ALJALDAKKALSEN phase별 표정 매핑 예시
 
 | Phase | eyes | eyebrows | mouth | 의도 |
 |-------|------|----------|-------|------|

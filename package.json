@@ -1,5 +1,5 @@
 {
-  "name": "ralph",
+  "name": "aljaldakkalsen",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -25,6 +25,7 @@
     "pdf-parse": "^2.4.5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "slides-grab": "^1.2.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {

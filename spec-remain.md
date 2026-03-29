@@ -1,4 +1,4 @@
-# Ralph — 남은 작업
+# ALJALDAKKALSEN — 남은 작업
 
 이미 구현 완료된 US-001~013 이후, 추가로 필요한 작업들.
 `ralph-remain.sh`로 실행.
