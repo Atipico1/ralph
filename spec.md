@@ -28,7 +28,7 @@
 |------|------|----------|------|
 | 도메인 분류 | `google/gemini-3-flash-preview` | OpenRouter | 빠른 분류 |
 | 페르소나 동적 생성 | `google/gemini-3-flash-preview` | OpenRouter | |
-| Collect 질문 생성 | `google/gemini-3-flash-preview` | OpenRouter | 메인 에이전트 |
+| Collect 질문 생성 | Cerebras GLM 4.7 | Cerebras | 속도 최우선 (~1초/질문) |
 | Simulate 후보 3개 생성 | Cerebras GLM 4.7 | Cerebras | 초고속 병렬 생성 |
 | Simulate 혼잣말 코멘트 | Cerebras GLM 4.7 | Cerebras | 후보 생성 중 tool call로 코멘트 생성 (별도 호출 아님) |
 | Simulate 평가/선택 | `google/gemini-3.1-pro-preview` | OpenRouter | 도메인별 동적 평가 기준 생성 + 고품질 판단 |

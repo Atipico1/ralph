@@ -1,6 +1,6 @@
-import { generateText, streamText, Output, NoObjectGeneratedError } from 'ai';
+import { generateText, Output, NoObjectGeneratedError } from 'ai';
 import { z } from 'zod';
-import { mainAgentModel } from '@/ai/providers';
+import { mainAgentModel, collectModel } from '@/ai/providers';
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -178,13 +178,13 @@ function buildQuestionPrompt(
 // streamNextQuestion
 // ---------------------------------------------------------------------------
 
-export function streamNextQuestion(
+export async function generateNextQuestion(
   personaPrompt: string,
   conversationHistory: ConversationMessage[],
   collectedContexts: CollectedContextItem[],
   questionCount: number,
   maxQuestions: number,
-) {
+): Promise<NextQuestion> {
   const { system, prompt } = buildQuestionPrompt(
     personaPrompt,
     conversationHistory,
@@ -193,14 +193,25 @@ export function streamNextQuestion(
     maxQuestions,
   );
 
-  const result = streamText({
-    model: mainAgentModel(),
-    experimental_output: Output.object({ schema: nextQuestionSchema }),
-    system,
-    prompt,
-  });
+  try {
+    const { experimental_output: output } = await generateText({
+      model: collectModel(),
+      experimental_output: Output.object({ schema: nextQuestionSchema }),
+      system,
+      prompt,
+    });
 
-  return result;
+    if (!output) {
+      return buildFallbackQuestion();
+    }
+
+    return output;
+  } catch (error: unknown) {
+    if (NoObjectGeneratedError.isInstance(error)) {
+      return buildFallbackQuestion();
+    }
+    throw error;
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -35,9 +35,14 @@ export function getCerebras() {
   });
 }
 
-/** Main agent: classify, persona, collect, revision */
+/** Main agent: classify, persona, revision */
 export function mainAgentModel() {
   return getOpenRouter()('google/gemini-3-flash-preview');
+}
+
+/** Collect question generation — Cerebras for speed (~1s/question) */
+export function collectModel() {
+  return getCerebras()('zai-glm-4.7');
 }
 
 /** Simulation generation + comments */
