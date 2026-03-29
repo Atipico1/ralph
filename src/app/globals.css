@@ -120,3 +120,16 @@
 @utility animate-modal-enter {
   animation: modal-enter 0.2s ease-out;
 }
+
+@keyframes dialog-backdrop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility animate-dialog-backdrop {
+  animation: dialog-backdrop 0.2s ease-out;
+}

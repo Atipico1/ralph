@@ -8,6 +8,7 @@ import {
 import CollectView from '@/components/collect/CollectView';
 import SimulateView from '@/components/simulate/SimulateView';
 import DeliverView from '@/components/deliver/DeliverView';
+import Header from '@/components/shared/Header';
 import type { Question } from '@/hooks/useCollect';
 
 interface ProjectPageProps {
@@ -62,12 +63,15 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     }));
 
     return (
-      <CollectView
-        projectId={project.id}
-        initialQuestion={initialQuestion}
-        maxQuestions={project.maxQuestions}
-        initialContexts={initialContexts}
-      />
+      <>
+        <Header phase="collect" />
+        <CollectView
+          projectId={project.id}
+          initialQuestion={initialQuestion}
+          maxQuestions={project.maxQuestions}
+          initialContexts={initialContexts}
+        />
+      </>
     );
   }
 
@@ -79,7 +83,12 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
       value: c.value,
     }));
 
-    return <SimulateView projectId={project.id} contexts={contexts} />;
+    return (
+      <>
+        <Header phase="simulate" />
+        <SimulateView projectId={project.id} contexts={contexts} />
+      </>
+    );
   }
 
   // ── Deliver phase ──────────────────────────────────────────────────────────
@@ -106,11 +115,14 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     }));
 
     return (
-      <DeliverView
-        projectId={project.id}
-        projectTitle={project.title}
-        simulations={simulationData}
-      />
+      <>
+        <Header phase="deliver" />
+        <DeliverView
+          projectId={project.id}
+          projectTitle={project.title}
+          simulations={simulationData}
+        />
+      </>
     );
   }
 }
