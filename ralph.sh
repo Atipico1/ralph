@@ -539,10 +539,41 @@ log "Phase 3 — Azure 배포"
 
 npm run build || { log "빌드 실패 — 배포 중단"; exit 1; }
 
+# .env.local에서 환경변수 읽기
+ENV_FILE="$DIR/.env.local"
+if [ ! -f "$ENV_FILE" ]; then
+    log "ERROR: .env.local not found — 배포에 필요한 API 키 없음"
+    exit 1
+fi
+
+# .env.local에서 key=value 파싱 → --set-env-vars 형식으로 변환
+ENV_VARS=""
+while IFS='=' read -r key value; do
+    # 빈 줄, 주석 스킵
+    [[ -z "$key" || "$key" == \#* ]] && continue
+    # DATABASE_PATH는 로컬 경로이므로 프로덕션 값으로 덮어쓰기
+    if [ "$key" = "DATABASE_PATH" ]; then
+        value="/app/data/local.db"
+    fi
+    ENV_VARS="$ENV_VARS $key=$value"
+done < "$ENV_FILE"
+
+# DATABASE_PATH가 .env.local에 없으면 추가
+if ! grep -q "^DATABASE_PATH=" "$ENV_FILE"; then
+    ENV_VARS="$ENV_VARS DATABASE_PATH=/app/data/local.db"
+fi
+
+log "환경변수 설정: $(echo "$ENV_VARS" | sed 's/=[^ ]*/=***/g')"
+
 az containerapp up \
     --name ralph-app \
     --resource-group anymorph-rg-kr \
     --source .
+
+az containerapp update \
+    --name ralph-app \
+    --resource-group anymorph-rg-kr \
+    --set-env-vars $ENV_VARS
 
 # 배포된 앱 URL 추출
 APP_URL=$(az containerapp show \
