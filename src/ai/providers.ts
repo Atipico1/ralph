@@ -1,41 +1,51 @@
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
-// --- OpenRouter ---
-
-if (!process.env.OPENROUTER_API_KEY) {
-  throw new Error(
-    'Missing required environment variable: OPENROUTER_API_KEY\n' +
-      'Set it in .env.local: OPENROUTER_API_KEY=<your-key>'
-  );
+function getOpenRouterKey(): string {
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) {
+    throw new Error(
+      'Missing required environment variable: OPENROUTER_API_KEY\n' +
+        'Set it in .env.local: OPENROUTER_API_KEY=<your-key>',
+    );
+  }
+  return key;
 }
 
-export const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
-
-// --- Cerebras ---
-
-if (!process.env.CEREBRAS_API_KEY) {
-  throw new Error(
-    'Missing required environment variable: CEREBRAS_API_KEY\n' +
-      'Set it in .env.local: CEREBRAS_API_KEY=<your-key>'
-  );
+function getCerebrasKey(): string {
+  const key = process.env.CEREBRAS_API_KEY;
+  if (!key) {
+    throw new Error(
+      'Missing required environment variable: CEREBRAS_API_KEY\n' +
+        'Set it in .env.local: CEREBRAS_API_KEY=<your-key>',
+    );
+  }
+  return key;
 }
 
-export const cerebras = createOpenAICompatible({
-  name: 'cerebras',
-  baseURL: 'https://api.cerebras.ai/v1',
-  apiKey: process.env.CEREBRAS_API_KEY,
-});
+export function getOpenRouter() {
+  return createOpenRouter({ apiKey: getOpenRouterKey() });
+}
 
-// --- Model references ---
+export function getCerebras() {
+  return createOpenAICompatible({
+    name: 'cerebras',
+    baseURL: 'https://api.cerebras.ai/v1',
+    apiKey: getCerebrasKey(),
+  });
+}
 
 /** Main agent: classify, persona, collect, revision */
-export const mainAgentModel = openrouter('google/gemini-3-flash-preview');
+export function mainAgentModel() {
+  return getOpenRouter()('google/gemini-3-flash-preview');
+}
 
 /** Simulation generation + comments */
-export const simulationModel = cerebras('zai-glm-4.7');
+export function simulationModel() {
+  return getCerebras()('zai-glm-4.7');
+}
 
 /** Simulation evaluation */
-export const evaluationModel = openrouter('google/gemini-3.1-pro-preview');
+export function evaluationModel() {
+  return getOpenRouter()('google/gemini-3.1-pro-preview');
+}
