@@ -366,3 +366,57 @@ Started: Sun Mar 29 11:57:30 KST 2026
   ✓ US-012
   ✓ US-013
 ---
+
+## 2026-03-29 — US-014
+- Implemented file/image upload during Collect phase
+- DB: `uploaded_files` table (project_id, message_id FK cascade, filename, mime_type, file_path, extracted_text, analysis)
+- DB: messages `inputType` enum updated to include `'file'`
+- Server: `POST /api/projects/[id]/upload` — FormData reception, 10MB limit, type-based processing
+  - Image (jpg/png/webp): Vision API analysis via `mainAgentModel()` with messages array + image content part
+  - PDF: `pdf-parse` v2 (`PDFParse` class) text extraction
+  - Text (txt/md): UTF-8 buffer read
+  - Other: save only, filename in context
+- Server: `src/lib/file-processing.ts` — processing helpers (analyzeImage, extractPdfText, type detection)
+- Server: `next.config.ts` — added `'pdf-parse'` to `serverExternalPackages`
+- Client: `FileInput.tsx` — drag-and-drop zone + file select, image thumbnail preview, 10MB client validation, upload progress/loading, success state with analysis/text preview
+- Client: `useCollect.ts` — `uploadFile()` function, `messageId` tracking from SSE events
+- Client: `CollectView.tsx` — renders FileInput for `inputType === 'file'`
+- Client: chat route SSE event now includes `messageId` for upload API integration
+- Tests: 25 new contract tests (upload-route), 126/126 total
+- Files: schema.ts, queries.ts, upload/route.ts, file-processing.ts, FileInput.tsx, useCollect.ts, CollectView.tsx, chat/route.ts, page.tsx, .gitignore, next.config.ts, package.json, upload-route.test.ts
+- Learnings for future iterations:
+  - pdf-parse v2 uses `PDFParse` class API: `new PDFParse({ data: new Uint8Array(buffer) })`, then `.getText()`, then `.destroy()`
+  - Vision API with AI SDK: use `messages` array with `{ type: 'image', image: buffer, mimeType }` content part (not system+prompt string format)
+  - FormData in App Router: `request.formData()` standard Web API, no multer/formidable needed
+  - File objects in tests: `new File([bytes], 'name.ext', { type: 'mime/type' })` works in Node.js
+  - Upload processing errors should not fail the upload — catch and continue (file already saved)
+  - `messageId` must flow from server (chat SSE) to client (useCollect) to upload API for FK reference
+---
+
+## 03-29 16:07 US-014 DONE
+---
+
+## 03-29 16:14 US-015 DONE
+---
+
+## 2026-03-29 — US-016
+- Created `src/components/shared/Header.tsx`: sticky top bar with home button (house icon + "Ralph" text)
+  - Phase-aware: collect shows ConfirmDialog, simulate/deliver navigates directly to /
+  - Frosted glass style: bg-white/90 + backdrop-blur-sm + shadow-sm
+  - Min 44x44px touch target, ARIA aria-label="홈으로 이동"
+- Created `src/components/shared/ConfirmDialog.tsx`: confirmation modal for leaving Collect phase
+  - Message: "진행 중인 상담이 있습니다. 나가시겠습니까?"
+  - "취소" (secondary) / "나가기" (danger red) buttons
+  - ARIA: role="dialog", aria-modal, aria-labelledby
+  - Escape key + backdrop click closes
+  - Reuses existing animate-modal-enter + new animate-dialog-backdrop
+- Updated `src/app/project/[id]/page.tsx`: Header added above all 3 phase views
+- Added dialog-backdrop animation to globals.css
+- Landing page unchanged (no header, chips already route to /project/[id] → phase routing)
+- TypeScript typecheck + ESLint + 126/126 tests pass
+- Files: src/components/shared/Header.tsx, src/components/shared/ConfirmDialog.tsx, src/app/project/[id]/page.tsx, src/app/globals.css
+- Learnings for future iterations:
+  - Shared header as client component in server-rendered page: pass phase as prop from server component
+  - Fragment wrapping (<>Header + View</>) in server component works cleanly for adding cross-cutting UI
+  - Dialog focus trap not implemented (consistent with existing RevisionModal pattern) — consider for accessibility pass
+---

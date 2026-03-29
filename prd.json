@@ -2,7 +2,11 @@
   "project": "Ralph",
   "branchName": "ralph/v1-remain",
   "description": "Ralph v1 남은 작업 — 파일 업로드, UX 개선, 네비게이션, Firecrawl, 안정성",
-  "qualityGates": ["npm run typecheck", "npm run lint", "npm test"],
+  "qualityGates": [
+    "npm run typecheck",
+    "npm run lint",
+    "npm test"
+  ],
   "userStories": [
     {
       "id": "US-014",
@@ -26,7 +30,7 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "클라이언트 < 5MB → Base64, 서버 fallback. uploads/ gitignore. serverExternalPackages 확인."
     },
     {
@@ -47,7 +51,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "ChoiceInput 컴포넌트 수정"
     },
     {
@@ -67,7 +71,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
