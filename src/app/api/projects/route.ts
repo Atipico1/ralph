@@ -8,6 +8,7 @@ import {
   createMessage,
   updateProject,
 } from '@/db/queries';
+import { safeStringifyOptions } from '@/lib/json-safety';
 
 // ── POST /api/projects ──────────────────────────────────────────────────────
 
@@ -70,9 +71,7 @@ export async function POST(request: Request) {
       role: 'agent',
       content: firstQuestion.question,
       inputType: firstQuestion.inputType,
-      options: firstQuestion.options
-        ? JSON.stringify(firstQuestion.options)
-        : null,
+      options: safeStringifyOptions(firstQuestion.options),
     });
 
     return Response.json({

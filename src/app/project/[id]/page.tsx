@@ -5,6 +5,7 @@ import {
   getCollectedContextByProject,
   getSimulationsByProject,
 } from '@/db/queries';
+import { safeParseOptions } from '@/lib/json-safety';
 import CollectView from '@/components/collect/CollectView';
 import SimulateView from '@/components/simulate/SimulateView';
 import DeliverView from '@/components/deliver/DeliverView';
@@ -33,14 +34,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
     let initialQuestion: Question | null = null;
     if (lastAgentMessage) {
-      let parsedOptions: string[] | null = null;
-      if (lastAgentMessage.options) {
-        try {
-          parsedOptions = JSON.parse(lastAgentMessage.options) as string[];
-        } catch {
-          parsedOptions = null;
-        }
-      }
+      const parsedOptions = safeParseOptions(lastAgentMessage.options);
 
       initialQuestion = {
         question: lastAgentMessage.content,

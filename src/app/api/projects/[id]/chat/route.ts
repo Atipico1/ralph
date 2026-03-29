@@ -17,6 +17,7 @@ import {
   buildSearchQuery,
   formatSearchResultsForPrompt,
 } from '@/ai/firecrawl';
+import { safeStringifyOptions } from '@/lib/json-safety';
 
 // ── Request schema ──────────────────────────────────────────────────────────
 
@@ -194,9 +195,7 @@ export async function POST(
           role: 'agent',
           content: nextQuestion.question,
           inputType: nextQuestion.inputType,
-          options: nextQuestion.options
-            ? JSON.stringify(nextQuestion.options)
-            : null,
+          options: safeStringifyOptions(nextQuestion.options),
         });
 
         // Send final structured question event
