@@ -5,6 +5,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockGetProject = vi.fn();
 const mockGetCollectedContextByProject = vi.fn();
 const mockGetSimulationsByProject = vi.fn();
+const mockGetLatestRevisionOption = vi.fn();
+const mockGetSimulationsByProjectAndRound = vi.fn();
 const mockCreateSimulation = vi.fn();
 const mockUpdateProject = vi.fn();
 
@@ -14,6 +16,10 @@ vi.mock('@/db/queries', () => ({
     mockGetCollectedContextByProject(...args),
   getSimulationsByProject: (...args: unknown[]) =>
     mockGetSimulationsByProject(...args),
+  getLatestRevisionOption: (...args: unknown[]) =>
+    mockGetLatestRevisionOption(...args),
+  getSimulationsByProjectAndRound: (...args: unknown[]) =>
+    mockGetSimulationsByProjectAndRound(...args),
   createSimulation: (...args: unknown[]) => mockCreateSimulation(...args),
   updateSimulation: vi.fn(),
   updateProject: (...args: unknown[]) => mockUpdateProject(...args),
@@ -144,6 +150,8 @@ function setupDefaultMocks() {
   mockGetProject.mockReturnValue(baseProject);
   mockGetCollectedContextByProject.mockReturnValue(collectedContextRows);
   mockGetSimulationsByProject.mockReturnValue([]);
+  mockGetLatestRevisionOption.mockReturnValue(undefined);
+  mockGetSimulationsByProjectAndRound.mockReturnValue([]);
   mockUpdateProject.mockReturnValue(undefined);
 
   let simCounter = 0;

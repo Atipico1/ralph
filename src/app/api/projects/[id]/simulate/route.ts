@@ -5,6 +5,8 @@ import {
   getProject,
   getCollectedContextByProject,
   getSimulationsByProject,
+  getLatestRevisionOption,
+  getSimulationsByProjectAndRound,
   createSimulation,
   updateProject,
 } from '@/db/queries';
@@ -15,6 +17,7 @@ import {
   calculateNextRound,
   buildSummary,
   type CollectedContextItem,
+  type RevisionContext,
   type EvaluationResult,
 } from '@/ai/simulate';
 
@@ -74,6 +77,22 @@ export async function POST(
   const domain = project.domain;
   const angles = getApproachAngles(domain);
 
+  // Build revision context for round > 1
+  let revisionCtx: RevisionContext | undefined;
+  if (round > 1) {
+    const latestRevision = getLatestRevisionOption(id);
+    const previousRoundSims = getSimulationsByProjectAndRound(id, round - 1);
+    const previousSelected = previousRoundSims.find((s) => s.isSelected === 1);
+
+    if (latestRevision && previousSelected) {
+      const feedback = latestRevision.customInput ?? latestRevision.selectedOption;
+      revisionCtx = {
+        previousContent: previousSelected.content,
+        revisionFeedback: feedback,
+      };
+    }
+  }
+
   // Use TransformStream pattern: return Response immediately, do async work
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
@@ -88,7 +107,7 @@ export async function POST(
     try {
       // Start 3 parallel streamText calls
       const streams = angles.map((angle, index) =>
-        generateCandidate(index, personaPrompt, contexts, angle),
+        generateCandidate(index, personaPrompt, contexts, angle, revisionCtx),
       );
 
       // Accumulated content for each candidate

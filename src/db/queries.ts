@@ -1,4 +1,4 @@
-import { eq, desc, asc } from 'drizzle-orm';
+import { eq, desc, asc, and, max } from 'drizzle-orm';
 import { db } from './index';
 import {
   projects,
@@ -121,4 +121,52 @@ export function createRevisionOption(
 ): RevisionOption {
   const row = db.insert(revisionOptions).values(data).returning().get();
   return row;
+}
+
+export function getLatestRevisionOption(
+  projectId: string
+): RevisionOption | undefined {
+  return db
+    .select()
+    .from(revisionOptions)
+    .where(eq(revisionOptions.projectId, projectId))
+    .orderBy(desc(revisionOptions.createdAt))
+    .limit(1)
+    .get();
+}
+
+export function getSimulationsByProjectAndRound(
+  projectId: string,
+  round: number
+): Simulation[] {
+  return db
+    .select()
+    .from(simulations)
+    .where(
+      and(
+        eq(simulations.projectId, projectId),
+        eq(simulations.round, round),
+      ),
+    )
+    .orderBy(asc(simulations.createdAt))
+    .all();
+}
+
+export function getMaxRound(projectId: string): number {
+  const result = db
+    .select({ maxRound: max(simulations.round) })
+    .from(simulations)
+    .where(eq(simulations.projectId, projectId))
+    .get();
+  return result?.maxRound ?? 0;
+}
+
+export function deleteCollectedContextByProject(projectId: string): void {
+  db.delete(collectedContext)
+    .where(eq(collectedContext.projectId, projectId))
+    .run();
+}
+
+export function deleteMessagesByProject(projectId: string): void {
+  db.delete(messages).where(eq(messages.projectId, projectId)).run();
 }

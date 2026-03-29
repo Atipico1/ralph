@@ -107,6 +107,30 @@ export function buildCandidateUserPrompt(
   return `수집된 정보:\n${contextText}\n\n위 정보를 바탕으로 최선의 결과물을 작성해주세요.`;
 }
 
+export interface RevisionContext {
+  previousContent: string;
+  revisionFeedback: string;
+}
+
+export function buildRevisionCandidateUserPrompt(
+  contexts: CollectedContextItem[],
+  revision: RevisionContext,
+): string {
+  const contextText = contexts
+    .map((c) => `- ${c.key}: ${c.value}`)
+    .join('\n');
+
+  return `수집된 정보:\n${contextText}
+
+이전 라운드 결과물:
+${revision.previousContent}
+
+수정 요청: ${revision.revisionFeedback}
+
+위 수집 정보와 이전 결과물을 참고하되, 수정 요청 사항을 반영하여 개선된 결과물을 작성해주세요.
+이전 결과물의 좋은 부분은 유지하면서 수정 요청 방향으로 보완하세요.`;
+}
+
 function buildEvaluationPrompt(
   domain: string | null,
   contexts: CollectedContextItem[],
@@ -146,11 +170,16 @@ export function generateCandidate(
   personaPrompt: string,
   contexts: CollectedContextItem[],
   angle: ApproachAngle,
+  revision?: RevisionContext,
 ) {
+  const prompt = revision
+    ? buildRevisionCandidateUserPrompt(contexts, revision)
+    : buildCandidateUserPrompt(contexts);
+
   const result = streamText({
     model: simulationModel(),
     system: buildCandidateSystemPrompt(personaPrompt, angle),
-    prompt: buildCandidateUserPrompt(contexts),
+    prompt,
     tools: { add_comment: addCommentTool },
     maxSteps: 2,
   });
