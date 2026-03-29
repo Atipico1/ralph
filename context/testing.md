@@ -80,12 +80,27 @@ const skip = !process.env.OPENROUTER_API_KEY;
 describe.skipIf(skip)('AI Smoke Tests', () => { ... });
 ```
 
+### 테스트 도구 선택
+
+| 대상 | 도구 | 이유 |
+|------|------|------|
+| API route (POST/GET) | **curl 또는 fetch로 직접 호출** | 브라우저 불필요, API 응답 스키마 검증 |
+| AI provider 연동 | **코드에서 직접 호출** | SDK 함수 직접 실행 |
+| DB 연동 | **코드에서 직접 호출** | 쿼리 함수 직접 실행 |
+| UI/UX (화면 렌더링, 클릭, 전환) | **agent-browser CLI (headful)** | 실제 브라우저 조작 필수 |
+| 전체 유저 플로우 (E2E) | **agent-browser CLI (headful)** | Landing → Deliver 전체 흐름 |
+
+**API 테스트 가능한 것은 API 직접 호출로 검증.** agent-browser는 UI 검증과 E2E에만 사용.
+
 ### 테스트 규칙
 
 - 계약 테스트는 외부 호출 없이 빠르게 실행 — 요청/응답 형식만 검증
 - **스모크 테스트에 mock 절대 금지** — 실제 API 키로 실제 엔드포인트 호출만 허용
 - 스모크 테스트는 유저 스토리 흐름을 따라 실제 호출 (더미 프롬프트 금지)
 - 스모크 테스트는 .env.local이 없으면 graceful skip
+- API route 스모크: `curl`이나 `fetch`로 직접 호출하여 응답 검증
+- AI/DB 스모크: 코드에서 직접 함수 호출하여 결과 검증
+- **agent-browser는 E2E(Phase 2)에서 UI/전체 플로우 검증에만 사용**
 - 모든 API route에 대해 최소 1개의 계약 테스트 필수
 - AI 호출 로직에 대해 요청/응답 스키마 계약 테스트 필수
 - mock은 계약 테스트에서 요청 형식 검증 시에만 사용 (내부 로직 mock 금지)
