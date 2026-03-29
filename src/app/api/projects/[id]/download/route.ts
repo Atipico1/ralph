@@ -1,8 +1,4 @@
-import {
-  getProject,
-  getMaxRound,
-  getSimulationsByProjectAndRound,
-} from '@/db/queries';
+import { getProject, getSelectedSimulation } from '@/db/queries';
 
 export async function GET(
   _request: Request,
@@ -15,18 +11,7 @@ export async function GET(
     return Response.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  // Get selected simulation from latest round
-  const maxRound = getMaxRound(id);
-  if (maxRound === 0) {
-    return Response.json(
-      { error: 'No simulations found' },
-      { status: 400 },
-    );
-  }
-
-  const roundSims = getSimulationsByProjectAndRound(id, maxRound);
-  const selected = roundSims.find((s) => s.isSelected === 1);
-
+  const selected = getSelectedSimulation(id);
   if (!selected) {
     return Response.json(
       { error: 'No selected simulation found' },

@@ -161,6 +161,16 @@ export function getMaxRound(projectId: string): number {
   return result?.maxRound ?? 0;
 }
 
+/** Get the selected (is_selected=1) simulation from the latest round */
+export function getSelectedSimulation(
+  projectId: string,
+): Simulation | undefined {
+  const maxRound = getMaxRound(projectId);
+  if (maxRound === 0) return undefined;
+  const roundSims = getSimulationsByProjectAndRound(projectId, maxRound);
+  return roundSims.find((s) => s.isSelected === 1);
+}
+
 export function deleteCollectedContextByProject(projectId: string): void {
   db.delete(collectedContext)
     .where(eq(collectedContext.projectId, projectId))
@@ -169,4 +179,16 @@ export function deleteCollectedContextByProject(projectId: string): void {
 
 export function deleteMessagesByProject(projectId: string): void {
   db.delete(messages).where(eq(messages.projectId, projectId)).run();
+}
+
+export function deleteSimulationsByProject(projectId: string): void {
+  db.delete(simulations)
+    .where(eq(simulations.projectId, projectId))
+    .run();
+}
+
+export function deleteRevisionOptionsByProject(projectId: string): void {
+  db.delete(revisionOptions)
+    .where(eq(revisionOptions.projectId, projectId))
+    .run();
 }

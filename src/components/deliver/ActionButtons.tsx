@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { downloadMarkdown } from '@/lib/download';
 
@@ -9,7 +9,9 @@ import { downloadMarkdown } from '@/lib/download';
 interface ActionButtonsProps {
   content: string;
   projectTitle: string;
+  projectId: string;
   onSave: () => void;
+  onRevise: () => void;
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -17,29 +19,36 @@ interface ActionButtonsProps {
 export default function ActionButtons({
   content,
   projectTitle,
+  projectId,
   onSave,
+  onRevise,
 }: ActionButtonsProps) {
   const router = useRouter();
+  const [resetting, setResetting] = useState(false);
 
   const handleDownload = useCallback(() => {
     const filename = projectTitle || 'result';
     downloadMarkdown(content, filename);
   }, [content, projectTitle]);
 
-  const handleRevise = useCallback(() => {
-    // Placeholder for US-013 — revision modal
-    // For now, show a simple alert
-    window.alert('수정 요청 기능은 곧 추가됩니다.');
-  }, []);
-
-  const handleStartOver = useCallback(() => {
+  const handleStartOver = useCallback(async () => {
     const confirmed = window.confirm(
-      '처음부터 다시 시작하시겠습니까? 현재 결과는 유지됩니다.',
+      '처음부터 다시 시작하시겠습니까? 모든 대화와 결과가 초기화됩니다.',
     );
-    if (confirmed) {
+    if (!confirmed) return;
+
+    setResetting(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/reset`, {
+        method: 'POST',
+      });
+      if (!res.ok) throw new Error('초기화에 실패했습니다.');
       router.push('/');
+    } catch {
+      setResetting(false);
+      window.alert('초기화에 실패했습니다. 다시 시도해주세요.');
     }
-  }, [router]);
+  }, [projectId, router]);
 
   return (
     <section className="flex w-full flex-wrap gap-3">
@@ -87,10 +96,10 @@ export default function ActionButtons({
         다운로드
       </button>
 
-      {/* Revise button — secondary (placeholder for US-013) */}
+      {/* Revise button — secondary */}
       <button
         type="button"
-        onClick={handleRevise}
+        onClick={onRevise}
         className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 active:bg-gray-100"
       >
         <svg
@@ -112,8 +121,9 @@ export default function ActionButtons({
       {/* Start over — ghost/danger */}
       <button
         type="button"
-        onClick={handleStartOver}
-        className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 active:bg-gray-200"
+        onClick={() => void handleStartOver()}
+        disabled={resetting}
+        className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 active:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <svg
           className="h-4 w-4"
@@ -128,7 +138,7 @@ export default function ActionButtons({
             d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
           />
         </svg>
-        처음부터 다시
+        {resetting ? '초기화 중...' : '처음부터 다시'}
       </button>
     </section>
   );

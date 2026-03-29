@@ -1,8 +1,4 @@
-import {
-  getProject,
-  getMaxRound,
-  getSimulationsByProjectAndRound,
-} from '@/db/queries';
+import { getProject, getSelectedSimulation } from '@/db/queries';
 import { generateRevisionOptions } from '@/ai/revise';
 
 export async function GET(
@@ -16,18 +12,7 @@ export async function GET(
     return Response.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  // Get selected simulation from latest round
-  const maxRound = getMaxRound(id);
-  if (maxRound === 0) {
-    return Response.json(
-      { error: 'No simulations found' },
-      { status: 400 },
-    );
-  }
-
-  const roundSims = getSimulationsByProjectAndRound(id, maxRound);
-  const selected = roundSims.find((s) => s.isSelected === 1);
-
+  const selected = getSelectedSimulation(id);
   if (!selected) {
     return Response.json(
       { error: 'No selected simulation found' },
@@ -35,10 +20,16 @@ export async function GET(
     );
   }
 
-  const options = await generateRevisionOptions(
-    selected.content,
-    project.domain,
-  );
-
-  return Response.json({ options });
+  try {
+    const options = await generateRevisionOptions(
+      selected.content,
+      project.domain,
+    );
+    return Response.json({ options });
+  } catch {
+    return Response.json(
+      { error: 'Failed to generate revision options' },
+      { status: 500 },
+    );
+  }
 }

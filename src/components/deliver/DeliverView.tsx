@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useToast } from '@/hooks/useToast';
 import Toast from '@/components/Toast';
 import ResultDisplay from './ResultDisplay';
 import RationaleList from './RationaleList';
 import ActionButtons from './ActionButtons';
 import AlternativeCandidates from './AlternativeCandidates';
+import RevisionModal from './RevisionModal';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -29,11 +30,12 @@ interface DeliverViewProps {
 // ── Component ───────────────────────────────────────────────────────────────
 
 export default function DeliverView({
-  projectId: _projectId,
+  projectId,
   projectTitle,
   simulations,
 }: DeliverViewProps) {
   const { toast, showToast } = useToast();
+  const [revisionModalOpen, setRevisionModalOpen] = useState(false);
 
   // Separate selected from alternatives
   const selected = useMemo(
@@ -59,6 +61,14 @@ export default function DeliverView({
     // Show confirmation toast.
     showToast('저장되었습니다');
   }, [showToast]);
+
+  const handleOpenRevisionModal = useCallback(() => {
+    setRevisionModalOpen(true);
+  }, []);
+
+  const handleCloseRevisionModal = useCallback(() => {
+    setRevisionModalOpen(false);
+  }, []);
 
   if (!selected) {
     return (
@@ -104,7 +114,9 @@ export default function DeliverView({
           <ActionButtons
             content={selected.content}
             projectTitle={projectTitle}
+            projectId={projectId}
             onSave={handleSave}
+            onRevise={handleOpenRevisionModal}
           />
         </div>
 
@@ -113,6 +125,14 @@ export default function DeliverView({
           <AlternativeCandidates candidates={alternatives} />
         </div>
       </div>
+
+      {/* Revision modal */}
+      {revisionModalOpen && (
+        <RevisionModal
+          projectId={projectId}
+          onClose={handleCloseRevisionModal}
+        />
+      )}
 
       {/* Toast notification */}
       {toast && <Toast toast={toast} />}

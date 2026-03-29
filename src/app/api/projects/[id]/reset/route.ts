@@ -2,6 +2,8 @@ import {
   getProject,
   deleteCollectedContextByProject,
   deleteMessagesByProject,
+  deleteSimulationsByProject,
+  deleteRevisionOptionsByProject,
   updateProject,
 } from '@/db/queries';
 
@@ -16,7 +18,9 @@ export async function POST(
     return Response.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  // Delete collected context and messages
+  // Delete all project data (order matters: revision_options FK → simulations)
+  deleteRevisionOptionsByProject(id);
+  deleteSimulationsByProject(id);
   deleteCollectedContextByProject(id);
   deleteMessagesByProject(id);
 

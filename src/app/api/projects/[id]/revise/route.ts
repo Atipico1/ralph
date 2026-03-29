@@ -1,10 +1,15 @@
+import { z } from 'zod';
 import {
   getProject,
-  getMaxRound,
-  getSimulationsByProjectAndRound,
+  getSelectedSimulation,
   createRevisionOption,
   updateProject,
 } from '@/db/queries';
+
+const reviseBodySchema = z.object({
+  selectedOption: z.string().min(1),
+  customInput: z.string().optional(),
+});
 
 export async function POST(
   request: Request,
@@ -17,30 +22,19 @@ export async function POST(
     return Response.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const body = (await request.json()) as {
-    selectedOption?: string;
-    customInput?: string;
-  };
-
-  if (!body.selectedOption) {
+  let body: z.infer<typeof reviseBodySchema>;
+  try {
+    const raw = await request.json();
+    body = reviseBodySchema.parse(raw);
+  } catch {
     return Response.json(
-      { error: 'selectedOption is required' },
+      { error: 'Invalid request body: selectedOption is required' },
       { status: 400 },
     );
   }
 
   // Get selected simulation from latest round
-  const maxRound = getMaxRound(id);
-  if (maxRound === 0) {
-    return Response.json(
-      { error: 'No simulations found' },
-      { status: 400 },
-    );
-  }
-
-  const roundSims = getSimulationsByProjectAndRound(id, maxRound);
-  const selected = roundSims.find((s) => s.isSelected === 1);
-
+  const selected = getSelectedSimulation(id);
   if (!selected) {
     return Response.json(
       { error: 'No selected simulation found' },
