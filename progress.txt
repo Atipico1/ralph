@@ -1,3 +1,39 @@
 # Progress
 Started: Sun Mar 29 11:57:30 KST 2026
+
+## Codebase Patterns
+- Tailwind v4: CSS-first config (`@import "tailwindcss"`), no tailwind.config.js needed
+- PostCSS: only `@tailwindcss/postcss` plugin, no autoprefixer/postcss-import
+- next.config.ts: `output: 'standalone'` required for Azure Container Apps
+- tsconfig: `moduleResolution: "bundler"`, `jsx: "preserve"`, `strict: true`
+- Path alias: `@/*` → `./src/*`
+- Drizzle: `drizzle-kit push` for local dev, `DATABASE_PATH` env var with `?? 'local.db'` fallback
+- AI SDK: `@ai-sdk/openai-compatible` for OpenRouter/Cerebras, `@openrouter/ai-sdk-provider` also available
+- ESLint: `next lint` deprecated in Next.js 16, migrate to flat config when upgrading
+
+## 2026-03-29 — US-001
+- Next.js App Router + TypeScript strict + Tailwind v4 initialized
+- All required packages installed (ai, @ai-sdk/react, @openrouter/ai-sdk-provider, @ai-sdk/openai-compatible, drizzle-orm, better-sqlite3, drizzle-kit, nanoid, zod)
+- Files: package.json, tsconfig.json, next.config.ts, postcss.config.mjs, .eslintrc.json, drizzle.config.ts, src/app/{globals.css,layout.tsx,page.tsx}, src/db/schema.ts
+- Learnings for future iterations:
+  - .env.local has real keys, never commit it (already in .gitignore)
+  - Tailwind v4 does NOT need tailwind.config.js — all customization via @theme {} in CSS
+  - `next lint` shows deprecation warning but works on Next.js 15
+---
+
+## 03-29 12:13 US-001 DONE
+---
+
+## 2026-03-29 — US-002
+- Implemented `src/db/schema.ts`: 5 tables (projects, messages, collected_context, simulations, revision_options) with nanoid PKs, FK cascade deletes, WAL + foreign_keys pragmas
+- Created `src/db/index.ts`: better-sqlite3 connection using DATABASE_PATH env var with 'local.db' fallback
+- Created `src/db/queries.ts`: CRUD helpers for all 5 tables (synchronous, no async/await)
+- drizzle-kit push succeeded, all 5 tables confirmed in local.db
+- TypeScript strict typecheck passes, ESLint clean
+- Learnings for future iterations:
+  - better-sqlite3 is fully synchronous — use `.get()` for single row, `.all()` for arrays, `.run()` for void
+  - `$defaultFn(() => nanoid())` sets server-side default for IDs (not DB-level default)
+  - `integer('col', { mode: 'timestamp' })` with `default(sql\`(unixepoch())\`)` stores unix ts, returns JS Date
+  - `$onUpdateFn(() => new Date())` on updatedAt triggers on Drizzle-level updates only
+  - is_selected stored as plain integer (0/1) per spec — no `{ mode: 'boolean' }` conversion
 ---
