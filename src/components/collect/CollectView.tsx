@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCollect, type Question, type ContextItem } from '@/hooks/useCollect';
 import ChoiceInput from './ChoiceInput';
@@ -37,9 +37,17 @@ export default function CollectView({
   } = useCollect(projectId, initialQuestion);
 
   // Merge initial DB contexts with SSE-collected contexts (no duplicates by key)
-  const allContexts = mergeContexts(initialContexts, contexts);
+  const allContexts = useMemo(
+    () => mergeContexts(initialContexts, contexts),
+    [initialContexts, contexts],
+  );
 
-  const questionCount = currentQuestion?.questionCount ?? 0;
+  // Track questionCount independently to avoid flickering to 0 during transitions
+  const lastKnownCount = useRef(initialQuestion?.questionCount ?? 0);
+  if (currentQuestion) {
+    lastKnownCount.current = currentQuestion.questionCount;
+  }
+  const questionCount = lastKnownCount.current;
 
   // When done, refresh to re-fetch project (now in simulate phase)
   useEffect(() => {
@@ -61,7 +69,7 @@ export default function CollectView({
   return (
     <main className="flex min-h-screen flex-col md:flex-row">
       {/* Left area: question + input + nav */}
-      <div className="flex min-h-screen flex-1 flex-col px-4 py-8 md:px-8 lg:px-16">
+      <div className="flex min-h-screen flex-1 flex-col px-4 py-8 pb-16 md:px-8 md:pb-8 lg:px-16">
         {/* Progress bar */}
         <div className="mx-auto w-full max-w-xl">
           <ProgressBar

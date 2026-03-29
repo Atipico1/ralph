@@ -132,3 +132,86 @@ Started: Sun Mar 29 11:57:30 KST 2026
 
 ## 03-29 US-006 DONE
 ---
+
+## 03-29 13:10 US-006 DONE
+---
+
+## 2026-03-29 — US-007
+- Created `src/components/landing/LandingPage.tsx`: client component with fullscreen landing page
+  - Greeting: "안녕하세요! 무엇을 도와드릴까요?"
+  - Textarea input + "시작하기" submit button
+  - Recent project chips (max 5, from GET /api/projects)
+  - POST /api/projects with `{ input }` → router.push to `/project/[projectId]`
+  - Loading/error state handling
+- Updated `src/app/page.tsx`: thin server component wrapper importing LandingPage
+- Created `src/app/project/[id]/page.tsx`: placeholder page for redirect target (Next.js 15 async params)
+- TypeScript typecheck + ESLint clean, 35/35 tests pass
+- Files: src/components/landing/LandingPage.tsx, src/app/page.tsx, src/app/project/[id]/page.tsx
+- Learnings for future iterations:
+  - Next.js 15 App Router dynamic route params are Promise<{ id: string }> — must await
+  - useRouter from `next/navigation` for App Router (not `next/router`)
+  - Client component (`'use client'`) required for hooks (useState, useEffect, useRouter)
+  - Textarea doesn't submit on Enter (unlike input) — consider Cmd/Ctrl+Enter for future UX improvement
+---
+
+## 03-29 13:18 US-007 DONE
+---
+
+## 2026-03-29 — US-008
+- Created `src/hooks/useCollect.ts`: custom SSE hook (fetch + ReadableStream, NOT useChat)
+  - Handles 4 SSE events: context, question, done, error
+  - Robust SSE frame parser with buffer for incomplete chunks
+  - try/catch in handleFrame for malformed data resilience
+  - AbortController for cleanup on rapid re-sends
+- Created `src/components/collect/CollectView.tsx`: main Typeform-style fullscreen view
+  - key={questionCount} for CSS animation remount on question change
+  - Routes to ChoiceInput/TextInput/YesNoInput based on inputType
+  - isDone triggers router.refresh() for simulate phase transition
+  - Clears currentQuestion on send for smooth loading transition
+- Created `src/components/collect/ChoiceInput.tsx`: card buttons with 기타 custom input
+- Created `src/components/collect/TextInput.tsx`: textarea with submit button
+- Created `src/components/collect/YesNoInput.tsx`: two toggle buttons (네/아니요)
+- Updated `src/app/project/[id]/page.tsx`: server component with phase routing + initial question from DB
+- Updated `src/app/globals.css`: @keyframes question-enter + @utility animate-question-enter (Tailwind v4)
+- TypeScript typecheck + ESLint clean, 35/35 tests pass
+- Learnings for future iterations:
+  - useChat (@ai-sdk/react) only supports AI SDK Data Stream Protocol — custom SSE events require a custom hook
+  - EventSource doesn't support POST — use fetch + ReadableStream for SSE consumption
+  - SSE parsing: split by \n\n for frames, buffer incomplete last part with parts.pop()
+  - Tailwind v4 custom animation: use @utility directive (not @layer utilities)
+  - router.refresh() in Next.js App Router re-executes server component without full page reload
+  - key-driven remount is the cleanest pattern for CSS animation on data change
+---
+
+## 03-29 13:32 US-008 DONE
+---
+
+## 03-29 13:31 US-008 DONE
+---
+
+## 2026-03-29 — US-009
+- Created `src/components/collect/ProgressBar.tsx`: "상담 X/Y" text + visual progress bar with smooth transition
+- Created `src/components/collect/ClipboardPanel.tsx`: Desktop right panel + mobile bottom sheet with toggle
+  - Desktop: fixed 300px aside with "지금까지 파악한 것" title, ✓ prefixed context list, "나머지는 제가 알아볼게요" footer
+  - Mobile: collapsible bottom sheet with handle bar, overlay, context count
+- Created `src/components/collect/NavigationButtons.tsx`: "← 이전" + "건너뛰기 →" with disabled states
+- Modified `src/hooks/useCollect.ts`: added questionHistory, historyIndex, goBack(), canGoBack, skip()
+  - Extracted shared processStream() from sendMessage for DRY
+  - skip() sends { message: '건너뛰기', skip: true } to chat API
+  - goBack() is client-side navigation through question history
+- Modified `src/app/api/projects/[id]/chat/route.ts`: added skip flag to schema
+  - When skip=true: bypasses extractContext, sends empty contexts, still increments count + generates next question
+- Modified `src/components/collect/CollectView.tsx`: two-panel layout (left: question, right: clipboard)
+  - useMemo for context merging, useRef for stable questionCount across transitions
+  - Mobile: extra bottom padding (pb-16) to avoid bottom sheet overlap
+- Modified `src/app/project/[id]/page.tsx`: passes maxQuestions + initialContexts to CollectView
+- TypeScript typecheck + ESLint + tests pass (35/35)
+- Learnings for future iterations:
+  - Mobile bottom sheet: use fixed positioning + translate-y transform for smooth slide-up animation
+  - useRef for values that should persist across renders without triggering re-render (e.g., last known questionCount)
+  - useMemo for derived data that depends on multiple state values (context merging)
+  - Client-side question history is sufficient for "previous" navigation; server-side cleanup (context deletion + count decrement) can be added later if needed
+---
+
+## 03-29 US-009 DONE
+---
