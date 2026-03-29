@@ -215,3 +215,32 @@ Started: Sun Mar 29 11:57:30 KST 2026
 
 ## 03-29 US-009 DONE
 ---
+
+## 03-29 13:43 US-009 DONE
+---
+
+## 2026-03-29 — US-010
+- Created `src/ai/simulate.ts`: parallel candidate generation + evaluation logic
+  - `generateCandidate()`: streamText with Cerebras, add_comment tool, maxSteps: 2
+  - `evaluateCandidates()`: generateText + Output.object with Gemini Pro
+  - `evaluationSchema`: dynamic criteria + per-candidate scores + selectedIndex + rationale
+  - `getApproachAngles()`: 3 approach angles (감성적/실용적/창의적)
+  - `addCommentTool`: tool() with execute for model continuation
+  - `calculateNextRound()`, `buildSummary()`: pure helpers
+- Created `src/app/api/projects/[id]/simulate/route.ts`: SSE endpoint
+  - TransformStream pattern (Response returned immediately, async work in background)
+  - 3 parallel streamText drains via Promise.all + fullStream async iterator
+  - SSE events: candidate (index+chunk+status), comment (index+text), evaluation, done
+  - Error handling: partial failure (1-2 candidates) continues, all-fail sends error
+  - DB: 3 simulation records per round, is_selected=1 for winner, phase → deliver
+- Tests: 39 new (19 schema contracts + 20 route contracts), 74/74 total pass
+- TypeScript typecheck + ESLint clean
+- Files: src/ai/simulate.ts, src/app/api/projects/[id]/simulate/route.ts, __tests__/contracts/simulate-{schemas,route}.test.ts
+- Learnings for future iterations:
+  - streamText is synchronous (no await) — start all calls before draining
+  - Cannot use experimental_output (Output.object) + tools together in same streamText call
+  - fullStream async iterator yields text-delta, tool-call, tool-result, finish events
+  - tool() with execute function + maxSteps: 2 allows model to continue after tool call
+  - TransformStream pattern: return Response(readable) immediately, write to writable async
+  - Map lookup for index mapping is cleaner than repeated findIndex
+---
