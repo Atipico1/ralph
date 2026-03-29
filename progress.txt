@@ -420,3 +420,38 @@ Started: Sun Mar 29 11:57:30 KST 2026
   - Fragment wrapping (<>Header + View</>) in server component works cleanly for adding cross-cutting UI
   - Dialog focus trap not implemented (consistent with existing RevisionModal pattern) — consider for accessibility pass
 ---
+
+## 03-29 16:21 US-016 DONE
+---
+
+## 2026-03-29 — US-017
+- Created `src/ai/firecrawl.ts`: Firecrawl REST API client (no SDK)
+  - `firecrawlSearch(query)`: POST /v1/search, limit: 5, 300 char truncation per result
+  - `firecrawlScrape(url)`: POST /v1/scrape, formats: ['markdown']
+  - `buildSearchQuery(contexts, userMessage?)`: combines context values + user message, max 200 chars
+  - `formatSearchResultsForPrompt(results)`: numbered list with titles, descriptions, source URLs
+  - Both functions graceful skip on missing API key or any error (return []/null)
+- Collect integration (chat route):
+  - After context extraction, before question generation
+  - Calls firecrawlSearch with buildSearchQuery(contextItems, message)
+  - Injects formatted results into generateNextQuestion as webSearchContext
+- Simulate integration (simulate route):
+  - Before candidate generation, calls firecrawlSearch(buildSearchQuery(contexts))
+  - Passes webSearchContext to each generateCandidate call
+  - System prompt instructs model to include sources from web research
+  - Revision rounds (round > 1) intentionally skip web context — focus on feedback
+- Modified `src/ai/collect.ts`: buildQuestionPrompt + generateNextQuestion accept optional webSearchContext
+- Modified `src/ai/simulate.ts`: buildCandidateUserPrompt + generateCandidate accept optional webSearchContext, system prompt updated
+- Tests: 21 contract tests (firecrawl.test.ts) + 1 smoke test (firecrawl-smoke.test.ts), 147/147 pass
+- TypeScript typecheck + ESLint clean
+- Files: src/ai/firecrawl.ts, src/ai/collect.ts, src/ai/simulate.ts, chat/route.ts, simulate/route.ts, __tests__/contracts/firecrawl.test.ts, __tests__/smoke/firecrawl-smoke.test.ts
+- Learnings for future iterations:
+  - Firecrawl v1 search returns flat `data` array, v2 uses nested `data.web` — spec says v1
+  - Firecrawl API key checked at call time (lazy), not module level — same pattern as AI providers
+  - graceful skip = try/catch returning empty, never throw — keeps main flow unblocked
+  - Web search adds latency to chat turns — consider parallelizing with shouldEndCollectionEarly in future
+  - Revision rounds should focus on feedback not new web data — webSearchContext intentionally omitted
+---
+
+## 03-29 16:37 US-017 DONE
+---
