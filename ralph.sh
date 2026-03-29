@@ -135,11 +135,18 @@ For each task, follow this exact sequence:
 
 5. **Dispatch spec reviewer subagent** (use Spec Reviewer template)
    - Include acceptance criteria + implementer report
+   - **구현자를 최대한 의심하라.** 보고서를 믿지 말고 코드를 직접 읽어서 검증.
+   - "잘 됩니다"라는 주장은 증거 없이 절대 수용 금지.
+   - acceptance criteria를 한 줄씩 체크하며, 실제 구현과 대조.
    - SPEC_FAIL → implementer fixes → re-review (max 2 rounds)
 
 6. **Dispatch code quality reviewer subagent** (use Code Reviewer template)
    - Include git diff + requirements
    - DO NOT start before spec review passes
+   - **구현자가 테스트를 제대로 작성했는지 의심하라.**
+     - 테스트가 실제로 동작을 검증하는지 (mock만 검증하는 가짜 테스트 아닌지)
+     - 엣지 케이스를 빠뜨리지 않았는지
+     - "통과"라고 주장하는 테스트가 실제로 의미 있는 assertion인지
    - QUALITY_FAIL → fix → re-review (max 2 rounds)
    - **INFRA COMPLIANCE CHECK (반드시 포함):**
      모델명/라이브러리가 아래와 정확히 일치하는지 확인. 다르면 QUALITY_FAIL.
