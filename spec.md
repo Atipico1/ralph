@@ -17,6 +17,7 @@
 | AI SDK | Vercel AI SDK v4 | `ai`, `@ai-sdk/react` |
 | AI Provider (메인) | OpenRouter | `@openrouter/ai-sdk-provider` |
 | AI Provider (시뮬레이션) | Cerebras | OpenAI-compatible API |
+| 웹 검색/스크래핑 | Firecrawl | `firecrawl` (REST API) |
 | UI 컴포넌트 | 21st.dev Magic MCP | |
 | 스타일 | Tailwind CSS | |
 
@@ -37,8 +38,10 @@
 ```
 OPENROUTER_API_KEY=...
 CEREBRAS_API_KEY=...
-DATABASE_PATH=./local.db
+FIRECRAWL_API_KEY=...
 ```
+
+`DATABASE_PATH`는 코드에서 `process.env.DATABASE_PATH ?? './local.db'`로 처리. 로컬에서는 설정 불필요, Azure 배포 시에만 `/app/data/local.db`로 설정.
 
 ## Core Loop
 
@@ -288,6 +291,53 @@ const cerebras = createOpenAICompatible({
 
 const simModel = cerebras('glm-4.7');
 ```
+
+### Firecrawl (웹 검색/스크래핑)
+
+웹 검색이 필요한 모든 곳에서 Firecrawl API를 사용. REST API 직접 호출.
+
+```typescript
+// src/ai/firecrawl.ts
+const FIRECRAWL_BASE = 'https://api.firecrawl.dev/v1';
+
+export async function firecrawlSearch(query: string): Promise<SearchResult[]> {
+  const res = await fetch(`${FIRECRAWL_BASE}/search`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.FIRECRAWL_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, limit: 5 }),
+  });
+  return res.json();
+}
+
+export async function firecrawlScrape(url: string): Promise<ScrapeResult> {
+  const res = await fetch(`${FIRECRAWL_BASE}/scrape`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.FIRECRAWL_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ url, formats: ['markdown'] }),
+  });
+  return res.json();
+}
+```
+
+### Firecrawl 사용처
+
+| 단계 | 용도 | 예시 |
+|------|------|------|
+| Collect | 유저 응답 기반 사전 조사 → 더 좋은 후속 질문 | "여행지가 도쿄요" → 도쿄 관광 정보 검색 → "어떤 지역 위주로 가세요?" |
+| Simulate | 후보 생성 전 리서치 → 근거 있는 결과물 | 사업계획서 → 시장 규모, 경쟁사 검색 → 결과물에 반영 |
+| Simulate | 결과물의 rationale에 출처 포함 | "시장 규모 2.5조원 (출처: ...)" |
+
+### Firecrawl 호출 규칙
+
+- 환경변수 `FIRECRAWL_API_KEY` 없으면 검색 기능 graceful skip (에러 아님, 검색 없이 진행)
+- search 결과는 LLM 프롬프트에 주입 시 최대 5개, 각 300자 이내로 truncate
+- scrape는 필요한 경우에만 (search 결과의 URL을 상세 조회할 때)
 
 ## 도메인 페르소나 시스템
 
@@ -684,9 +734,10 @@ src/
 │   └── queries.ts                       # 쿼리 헬퍼
 ├── ai/
 │   ├── providers.ts                     # OpenRouter + Cerebras 설정
+│   ├── firecrawl.ts                     # Firecrawl 검색/스크래핑 클라이언트
 │   ├── personas.ts                      # 프리셋 페르소나 + 동적 생성
-│   ├── collect.ts                       # 질문 생성 로직
-│   ├── simulate.ts                      # 시뮬레이션 병렬 생성 + 평가
+│   ├── collect.ts                       # 질문 생성 로직 (Firecrawl 사전 조사 포함)
+│   ├── simulate.ts                      # 시뮬레이션 병렬 생성 + 평가 (Firecrawl 리서치 포함)
 │   └── revise.ts                        # 수정 선택지 생성
 ├── components/
 │   ├── landing/

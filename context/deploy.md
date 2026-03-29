@@ -14,7 +14,7 @@ Azure Container Apps (infra.md 참조)
 2. **테스트 통과**: `npm run typecheck && npm run lint && npm test`
 3. **E2E 통과**: Phase 2 완료
 4. **Dockerfile 확인**: standalone 빌드 + SQLite 바이너리 포함
-5. **환경변수**: 배포 시 OPENROUTER_API_KEY, CEREBRAS_API_KEY, DATABASE_PATH 설정 필요
+5. **환경변수**: 배포 시 OPENROUTER_API_KEY, CEREBRAS_API_KEY, FIRECRAWL_API_KEY, DATABASE_PATH 설정 필요
 
 ## 배포 명령
 
@@ -47,5 +47,6 @@ az containerapp update \
   --set-env-vars \
     OPENROUTER_API_KEY=... \
     CEREBRAS_API_KEY=... \
+    FIRECRAWL_API_KEY=... \
     DATABASE_PATH=/app/data/local.db
 ```
