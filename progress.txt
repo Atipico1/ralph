@@ -8,7 +8,9 @@ Started: Sun Mar 29 11:57:30 KST 2026
 - tsconfig: `moduleResolution: "bundler"`, `jsx: "preserve"`, `strict: true`
 - Path alias: `@/*` → `./src/*`
 - Drizzle: `drizzle-kit push` for local dev, `DATABASE_PATH` env var with `?? 'local.db'` fallback
-- AI SDK: `@ai-sdk/openai-compatible` for OpenRouter/Cerebras, `@openrouter/ai-sdk-provider` also available
+- AI SDK: `@openrouter/ai-sdk-provider` for OpenRouter, `@ai-sdk/openai-compatible` for Cerebras
+- Cerebras model ID: `zai-glm-4.7` (NOT `glm-4.7`), base URL: `https://api.cerebras.ai/v1`
+- AI providers use lazy init pattern (functions, not module-level constants) to avoid build-time env var failures
 - ESLint: `next lint` deprecated in Next.js 16, migrate to flat config when upgrading
 
 ## 2026-03-29 — US-001
@@ -36,4 +38,97 @@ Started: Sun Mar 29 11:57:30 KST 2026
   - `integer('col', { mode: 'timestamp' })` with `default(sql\`(unixepoch())\`)` stores unix ts, returns JS Date
   - `$onUpdateFn(() => new Date())` on updatedAt triggers on Drizzle-level updates only
   - is_selected stored as plain integer (0/1) per spec — no `{ mode: 'boolean' }` conversion
+---
+
+## 03-29 12:20 US-002 DONE
+---
+
+## 2026-03-29 — US-003
+- Created `src/ai/providers.ts`: OpenRouter + Cerebras provider configuration
+- Lazy initialization pattern (getOpenRouter/getCerebras functions) to avoid build-time failures when env vars absent
+- Three model reference functions: mainAgentModel(), simulationModel(), evaluationModel()
+- Env var validation with clear error messages at call time
+- TypeScript typecheck + ESLint clean
+- Files: src/ai/providers.ts
+- Learnings for future iterations:
+  - Cerebras GLM 4.7 model ID is `zai-glm-4.7` (with `zai-` prefix), NOT `glm-4.7`
+  - Use lazy provider init in Next.js to prevent `next build` failures when secrets are runtime-only
+  - `@openrouter/ai-sdk-provider`: provider instance is callable directly like `openrouter('model-id')`
+  - `@ai-sdk/openai-compatible`: requires `name`, `baseURL`, `apiKey` — Cerebras base URL is `https://api.cerebras.ai/v1`
+---
+
+## 03-29 US-003 DONE
+---
+
+## 03-29 12:25 US-003 DONE
+---
+
+## 2026-03-29 — US-004
+- Created `src/ai/personas.ts`: domain classification + persona generation system
+- DOMAIN_ROUTES: 5 domains (career_coach, business_consultant, travel_planner, content_creator, custom)
+- PRESET_PERSONAS: 3 presets with Korean system prompts (career_coach, business_consultant, travel_planner)
+- COMMON_PERSONA_RULES: 5 rules (AI word ban, friendly expert tone, easy language, confidence, proactive style)
+- classifyDomain(input): uses mainAgentModel() + Output.object with z.enum schema, fallback to 'custom'
+- generatePersona(domain, input): dynamic system prompt generation for non-preset domains
+- getPersonaPrompt(domain, input): orchestrator — preset or dynamic
+- Typecheck + lint clean
+- Files: src/ai/personas.ts
+- Learnings for future iterations:
+  - AI SDK 4.3.19 uses `experimental_output` / `Output.object()` — NOT `generateObject` (deprecated)
+  - Destructure result as `{ experimental_output: output }` (the property is named `experimental_output`)
+  - Use `z.enum()` for structured output schemas with fixed options — improves LLM adherence
+  - `Partial<Record<DomainKey, string>>` for partial preset maps — ensures compile-time key safety
+  - content_creator intentionally has no preset — tests dynamic generation path
+---
+
+## 03-29 12:36 US-004 DONE
+---
+
+## 2026-03-29 — US-005
+- Created `src/app/api/projects/route.ts`: POST (create project) + GET (list projects)
+- Created `src/app/api/projects/[id]/route.ts`: GET (project detail with messages, context, simulations)
+- POST /api/projects flow: validate input → create project → classifyDomain → getPersonaPrompt → generateFirstQuestion → save agent message → return { projectId, firstMessage }
+- First question generation uses generateText + Output.object with zod schema (question, inputType, options)
+- GET /api/projects returns max 10 projects with DB-level LIMIT
+- GET /api/projects/[id] joins messages (with parsed options JSON), collected_context, simulations
+- Modified `src/db/queries.ts`: listProjects now accepts optional `limit` parameter
+- Typecheck + lint clean
+- Files: src/app/api/projects/route.ts, src/app/api/projects/[id]/route.ts, src/db/queries.ts
+- Learnings for future iterations:
+  - Next.js 15 App Router: params is `Promise<{ id: string }>` — MUST await
+  - Use `Response.json()` (no import needed), not `NextResponse` unless redirect/cookies needed
+  - Route handlers: export named async functions `GET`, `POST` etc.
+  - Wrap `request.json()` in try-catch at route boundaries for malformed JSON
+  - generateText + Output.object pattern works well for structured API responses with fallback
+---
+
+## 03-29 12:44 US-005 DONE
+---
+
+## 2026-03-29 — US-006
+- Created `src/ai/collect.ts`: 3 AI functions + 1 streaming wrapper
+  - `extractContext()`: generateText + Output.object → key-value pairs from user response
+  - `shouldEndCollectionEarly()`: AI judges if enough info collected (min 3 questions guard)
+  - `streamNextQuestion()`: streamText + Output.object → structured question with streaming
+  - Shared `buildQuestionPrompt()` helper for DRY prompt construction
+- Created `src/app/api/projects/[id]/chat/route.ts`: POST handler with custom SSE
+  - Body: `{ message: string, optionIndex?: number }`
+  - SSE events: `context`, `question`, `done`, `error`
+  - Flow: save user msg → extract context → save to DB → increment count → check done → generate question
+  - Phase guard: rejects if project not in `collect` phase
+  - Persona guard: rejects if personaPrompt not initialized
+- Created `vitest.config.ts` with `@/*` path alias
+- Updated `package.json`: added vitest, test/test:watch/test:smoke scripts
+- Tests: 35 passing (17 schema contracts + 18 route contracts)
+- TypeScript typecheck + ESLint clean
+- Files: src/ai/collect.ts, src/app/api/projects/[id]/chat/route.ts, vitest.config.ts, package.json, __tests__/contracts/
+- Learnings for future iterations:
+  - streamText + experimental_output: Output.object() generates JSON text, textStream yields raw JSON chunks
+  - For structured output, consume full text then parse — partial JSON chunks aren't useful for client rendering
+  - Custom SSE (ReadableStream + text/event-stream) is simpler than createDataStreamResponse for multi-event endpoints
+  - NoObjectGeneratedError fallback pattern: always provide a sensible default question
+  - vi.mock with async importActual preserves real exports while mocking specific functions
+---
+
+## 03-29 US-006 DONE
 ---

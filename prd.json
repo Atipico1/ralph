@@ -2,7 +2,11 @@
   "project": "Ralph",
   "branchName": "ralph/v1",
   "description": "에이전트 주도 인터랙션 플랫폼. Collect → Simulate → Deliver.",
-  "qualityGates": ["npm run typecheck", "npm run lint", "npm test"],
+  "qualityGates": [
+    "npm run typecheck",
+    "npm run lint",
+    "npm test"
+  ],
   "userStories": [
     {
       "id": "US-001",
@@ -19,7 +23,7 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -34,7 +38,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "spec.md Data Model 섹션 참조"
     },
     {
@@ -48,7 +52,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -63,7 +67,7 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "spec.md 도메인 페르소나 시스템 섹션 참조"
     },
     {
@@ -77,7 +81,7 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
