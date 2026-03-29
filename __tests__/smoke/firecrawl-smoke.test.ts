@@ -24,9 +24,9 @@ describe.skipIf(skip)('Firecrawl Smoke Tests', () => {
         expect(first).toHaveProperty('url');
         expect(first).toHaveProperty('title');
         expect(first).toHaveProperty('description');
-        // Verify 300 char truncation
-        expect(first.description.length).toBeLessThanOrEqual(300);
-        expect(first.title.length).toBeLessThanOrEqual(300);
+        // No truncation — full content preserved
+        expect(typeof first.title).toBe('string');
+        expect(typeof first.description).toBe('string');
       }
 
       // Max 5 results

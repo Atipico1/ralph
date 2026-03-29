@@ -95,8 +95,8 @@ export async function firecrawlSearch(
 
     return json.data.slice(0, 5).map((item) => ({
       url: item.url ?? '',
-      title: truncate(item.title ?? '', 300),
-      description: truncate(item.description ?? item.markdown ?? '', 300),
+      title: item.title ?? '',
+      description: item.description ?? item.markdown ?? '',
     }));
   } catch {
     return [];

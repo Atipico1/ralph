@@ -13,10 +13,9 @@ import {
   generateNextQuestion,
 } from '@/ai/collect';
 import {
-  firecrawlSearch,
-  buildSearchQuery,
-  formatSearchResultsForPrompt,
-} from '@/ai/firecrawl';
+  agenticSearch,
+  formatAgenticResultsForPrompt,
+} from '@/ai/agentic-search';
 import { safeStringifyOptions } from '@/lib/json-safety';
 
 // ── Request schema ──────────────────────────────────────────────────────────
@@ -108,70 +107,80 @@ export async function POST(
           content: message,
         });
 
-        // 3. Extract context from user's response (skip if flagged)
-        if (isSkip) {
-          // Skip context extraction — send empty contexts
-          send('context', { contexts: [] });
-        } else {
-          const existingContextKeys = existingContext.map((c) => c.key);
-          const extracted = await extractContext(
-            personaPrompt,
-            message,
-            lastAgentQuestion,
-            existingContextKeys,
-          );
-
-          // Save extracted contexts to DB
-          if (extracted.contexts.length > 0 && lastAgentMessage) {
-            for (const ctx of extracted.contexts) {
-              createCollectedContext({
-                projectId: id,
-                key: ctx.key,
-                value: ctx.value,
-                questionId: lastAgentMessage.id,
-              });
-            }
-          }
-
-          // Send context event
-          send('context', { contexts: extracted.contexts });
-        }
-
-        // 4. Increment question_count
+        // 3. Parallel: extract context + agentic search run concurrently
         const newQuestionCount = project.questionCount + 1;
-        updateProject(id, { questionCount: newQuestionCount });
-
-        // 5. Check if done (max reached or AI early termination)
         const maxReached = newQuestionCount >= project.maxQuestions;
 
-        // Refresh collected context after new additions (reused below)
-        const allContext = getCollectedContextByProject(id);
-        const contextItems = allContext.map((c) => ({ key: c.key, value: c.value }));
+        // Pre-compute context items from existing data for parallel calls
+        const existingContextItems = existingContext.map((c) => ({
+          key: c.key,
+          value: c.value,
+        }));
 
-        let earlyEnd = false;
-        if (!maxReached) {
-          earlyEnd = await shouldEndCollectionEarly(
-            personaPrompt,
-            contextItems,
-            newQuestionCount,
-            project.maxQuestions,
-          );
+        // Launch independent tasks in parallel
+        const extractPromise = isSkip
+          ? Promise.resolve({ contexts: [] as { key: string; value: string }[] })
+          : extractContext(
+              personaPrompt,
+              message,
+              lastAgentQuestion,
+              existingContext.map((c) => c.key),
+            );
+
+        const earlyEndPromise = !maxReached
+          ? shouldEndCollectionEarly(
+              personaPrompt,
+              existingContextItems,
+              newQuestionCount,
+              project.maxQuestions,
+            )
+          : Promise.resolve(false);
+
+        const searchPromise = maxReached
+          ? Promise.resolve({ summary: '', sources: [] as import('@/ai/firecrawl').SearchResult[] })
+          : agenticSearch(existingContextItems, message);
+
+        const [extracted, earlyEnd, agenticResult] = await Promise.all([
+          extractPromise,
+          earlyEndPromise,
+          searchPromise,
+        ]);
+
+        // Save extracted contexts to DB
+        if (extracted.contexts.length > 0 && lastAgentMessage) {
+          for (const ctx of extracted.contexts) {
+            createCollectedContext({
+              projectId: id,
+              key: ctx.key,
+              value: ctx.value,
+              questionId: lastAgentMessage.id,
+            });
+          }
         }
 
+        // Send context event
+        send('context', { contexts: extracted.contexts });
+
+        // Update question count
+        updateProject(id, { questionCount: newQuestionCount });
+
+        // Check if done
         if (maxReached || earlyEnd) {
-          // 6. Done: update phase to simulate
           updateProject(id, { phase: 'simulate' });
           send('done', { done: true, phase: 'simulate' });
           controller.close();
           return;
         }
 
-        // 7. Web search for context (graceful skip on failure)
-        const searchQuery = buildSearchQuery(contextItems, message);
-        const searchResults = await firecrawlSearch(searchQuery);
-        const webSearchContext = formatSearchResultsForPrompt(searchResults);
+        // Build context items including newly extracted ones
+        const allContextItems = [
+          ...existingContextItems,
+          ...extracted.contexts,
+        ];
 
-        // 8. Generate next question
+        const webSearchContext = formatAgenticResultsForPrompt(agenticResult);
+
+        // Generate next question
         const conversationHistory = [
           ...existingMessages.map((m) => ({
             role: m.role as 'agent' | 'user',
@@ -183,7 +192,7 @@ export async function POST(
         const nextQuestion = await generateNextQuestion(
           personaPrompt,
           conversationHistory,
-          contextItems,
+          allContextItems,
           newQuestionCount,
           project.maxQuestions,
           webSearchContext || undefined,

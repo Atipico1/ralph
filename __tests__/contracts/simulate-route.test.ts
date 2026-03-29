@@ -40,12 +40,11 @@ vi.mock('@/ai/simulate', async () => {
   };
 });
 
-// ── Mock Firecrawl ─────────────────────────────────────────────────────────
+// ── Mock Agentic Search ───────────────────────────────────────────────────
 
-vi.mock('@/ai/firecrawl', () => ({
-  firecrawlSearch: vi.fn().mockResolvedValue([]),
-  buildSearchQuery: vi.fn().mockReturnValue(''),
-  formatSearchResultsForPrompt: vi.fn().mockReturnValue(''),
+vi.mock('@/ai/agentic-search', () => ({
+  agenticSearch: vi.fn().mockResolvedValue({ summary: '', sources: [] }),
+  formatAgenticResultsForPrompt: vi.fn().mockReturnValue(''),
 }));
 
 // ── Import route AFTER mocks ────────────────────────────────────────────────

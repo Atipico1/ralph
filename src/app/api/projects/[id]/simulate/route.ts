@@ -21,10 +21,9 @@ import {
   type EvaluationResult,
 } from '@/ai/simulate';
 import {
-  firecrawlSearch,
-  buildSearchQuery,
-  formatSearchResultsForPrompt,
-} from '@/ai/firecrawl';
+  agenticSearch,
+  formatAgenticResultsForPrompt,
+} from '@/ai/agentic-search';
 
 // ── SSE helpers ─────────────────────────────────────────────────────────────
 
@@ -110,10 +109,9 @@ export async function POST(
   // Start async work (does not block response)
   (async () => {
     try {
-      // Web research before candidate generation (graceful skip on failure)
-      const searchQuery = buildSearchQuery(contexts);
-      const searchResults = await firecrawlSearch(searchQuery);
-      const webSearchContext = formatSearchResultsForPrompt(searchResults);
+      // Agentic web research: ReAct loop (search → reflect → search → ...)
+      const agenticResult = await agenticSearch(contexts);
+      const webSearchContext = formatAgenticResultsForPrompt(agenticResult);
 
       // Start 3 parallel streamText calls
       const streams = angles.map((angle, index) =>

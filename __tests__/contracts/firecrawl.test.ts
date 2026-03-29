@@ -64,22 +64,23 @@ describe('firecrawlSearch (contract tests)', () => {
     expect(body).toEqual({ query: '서울 여행', limit: 5 });
   });
 
-  it('returns parsed results with truncated descriptions', async () => {
+  it('returns full results without truncation', async () => {
     const longDesc = 'A'.repeat(400);
+    const longTitle = 'B'.repeat(500);
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
         success: true,
         data: [
-          { url: 'https://example.com', title: 'Test', description: longDesc },
+          { url: 'https://example.com', title: longTitle, description: longDesc },
         ],
       }),
     });
 
     const results = await firecrawlSearch('test');
     expect(results).toHaveLength(1);
-    expect(results[0].description.length).toBeLessThanOrEqual(300);
-    expect(results[0].description.endsWith('...')).toBe(true);
+    expect(results[0].title).toBe(longTitle);
+    expect(results[0].description).toBe(longDesc);
   });
 
   it('returns max 5 results even if API returns more', async () => {
