@@ -1,0 +1,225 @@
+{
+  "project": "Ralph",
+  "branchName": "ralph/v1",
+  "description": "에이전트 주도 인터랙션 플랫폼. Collect → Simulate → Deliver.",
+  "qualityGates": ["npm run typecheck", "npm run lint", "npm test"],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "프로젝트 초기화 + 패키지 설치",
+      "description": "As a developer, I need the Next.js project scaffolding with all dependencies installed.",
+      "acceptanceCriteria": [
+        "Next.js App Router + TypeScript strict 프로젝트 생성",
+        "Tailwind CSS 설정",
+        "패키지 설치: ai, @ai-sdk/react, @openrouter/ai-sdk-provider, @ai-sdk/openai-compatible",
+        "패키지 설치: drizzle-orm, better-sqlite3, drizzle-kit",
+        "패키지 설치: nanoid, zod",
+        ".env.local에 OPENROUTER_API_KEY, CEREBRAS_API_KEY, DATABASE_PATH 템플릿",
+        "npm run dev로 기본 페이지 렌더링 확인",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "DB 스키마 + 연결",
+      "description": "As a developer, I need the database schema and connection so all data operations work.",
+      "acceptanceCriteria": [
+        "src/db/schema.ts에 5개 테이블 정의 (projects, messages, collected_context, simulations, revision_options)",
+        "src/db/index.ts에 DB 연결 (DATABASE_PATH 환경변수 사용)",
+        "drizzle-kit push로 테이블 생성 성공",
+        "src/db/queries.ts에 기본 CRUD 헬퍼 (createProject, getProject, listProjects 등)",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "spec.md Data Model 섹션 참조"
+    },
+    {
+      "id": "US-003",
+      "title": "AI Provider 설정",
+      "description": "As a developer, I need the AI provider configuration so all AI calls work.",
+      "acceptanceCriteria": [
+        "src/ai/providers.ts에 OpenRouter provider 설정 (google/gemini-3-flash-preview, google/gemini-3.1-pro-preview)",
+        "src/ai/providers.ts에 Cerebras provider 설정 (OpenAI-compatible, glm-4.7)",
+        "환경변수 누락 시 명확한 에러 메시지",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "도메인 페르소나 시스템",
+      "description": "As a developer, I need the persona system that classifies domains and generates expert personas.",
+      "acceptanceCriteria": [
+        "src/ai/personas.ts에 프리셋 페르소나 3개 (career_coach, business_consultant, travel_planner)",
+        "classifyDomain(input) — 유저 첫 입력으로 도메인 분류 (Gemini Flash 호출)",
+        "generatePersona(domain, input) — 프리셋 없는 도메인에 대해 동적 시스템 프롬프트 생성",
+        "공통 규칙 반영: AI 단어 금지, 친근한 전문가 톤, 쉬운 말",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "spec.md 도메인 페르소나 시스템 섹션 참조"
+    },
+    {
+      "id": "US-005",
+      "title": "API: 프로젝트 생성 + 목록",
+      "description": "As a user, I need to create projects and see my recent ones.",
+      "acceptanceCriteria": [
+        "POST /api/projects — input 받아서 project 생성 + 도메인 분류 + 페르소나 생성 + 첫 질문 반환",
+        "GET /api/projects — 최근 프로젝트 목록 (최신순, 최대 10개)",
+        "GET /api/projects/[id] — 프로젝트 상세 (phase, messages, context, simulations 포함)",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "API: Collect 채팅 엔드포인트",
+      "description": "As a user, I need the chat endpoint that receives my response and returns the agent's next question.",
+      "acceptanceCriteria": [
+        "POST /api/projects/[id]/chat — 유저 응답 저장 + context 추출 + 다음 질문 생성",
+        "src/ai/collect.ts에 질문 생성 로직 (Gemini Flash, 스트리밍)",
+        "응답에 inputType, options 포함 (options 마지막에 항상 '기타' 포함)",
+        "question_count++ 관리, max_questions 도달 시 { done: true } 반환",
+        "충분히 수집되면 조기 종료 가능 (AI가 판단)",
+        "SSE 스트리밍으로 질문 생성 과정 전달",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Screen 0: Landing 페이지",
+      "description": "As a user, I want a clean landing page where I describe what I need.",
+      "acceptanceCriteria": [
+        "/ 라우트에 풀스크린 랜딩 렌더링",
+        "중앙에 인사 메시지 '안녕하세요! 무엇을 도와드릴까요?'",
+        "텍스트 입력 + 시작 버튼",
+        "최근 프로젝트 칩 표시 (GET /api/projects 연동)",
+        "입력 후 POST /api/projects → /project/[id]로 redirect",
+        "브라우저에서 랜딩 → 입력 → 이동 플로우 확인 (cmux-browser)",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "concept.md Screen 0 참조"
+    },
+    {
+      "id": "US-008",
+      "title": "Screen 1: Collect UI — 질문 + 입력",
+      "description": "As a user, I want to see one question at a time and answer it.",
+      "acceptanceCriteria": [
+        "/project/[id] 에서 phase=collect일 때 CollectView 렌더링",
+        "Typeform 스타일 전체 화면, 화면 전환 애니메이션 (fade/slide)",
+        "입력 타입별 UI: ChoiceInput (카드 버튼 + 기타), TextInput, YesNoInput",
+        "useChat 훅으로 /api/projects/[id]/chat와 연동",
+        "응답 시 다음 질문으로 자연스럽게 전환",
+        "done: true 받으면 자동으로 simulate phase로 전환",
+        "브라우저에서 질문 → 응답 → 다음 질문 → simulate 전환 확인 (cmux-browser)",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "concept.md Screen 1 참조"
+    },
+    {
+      "id": "US-009",
+      "title": "Screen 1: 클립보드 패널 + 진행 바 + 네비게이션",
+      "description": "As a user, I want to see my progress and collected context.",
+      "acceptanceCriteria": [
+        "오른쪽 ClipboardPanel에 수집된 맥락 요약 표시 (collected_context 연동)",
+        "상단 ProgressBar — '상담 3/10' (question_count/max_questions)",
+        "하단: [← 이전] 버튼 (직전 질문으로), [건너뛰기 →] 버튼 (다음 질문)",
+        "건너뛰기 시 해당 context 수집 안 함",
+        "모바일: 클립보드 패널을 하단 시트로",
+        "브라우저에서 이전/건너뛰기 동작 확인 (cmux-browser)",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "API: Simulate 엔드포인트 (병렬 생성 + SSE)",
+      "description": "As a developer, I need the simulate endpoint that generates 3 candidates in parallel via Cerebras.",
+      "acceptanceCriteria": [
+        "POST /api/projects/[id]/simulate — SSE 스트림 반환",
+        "src/ai/simulate.ts에 병렬 생성 로직 (Cerebras × 3 동시)",
+        "SSE events: candidate (index + chunk), comment (혼잣말), evaluation (평가 결과), done",
+        "생성 완료 후 Gemini Pro로 3개 평가 → score 매기기 → is_selected=1",
+        "simulations 테이블에 저장 (round 관리)",
+        "phase → deliver 전환",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "spec.md Simulate 병렬 생성 상세 섹션 참조"
+    },
+    {
+      "id": "US-011",
+      "title": "Screen 2: Simulate UI",
+      "description": "As a user, I want to watch the agent explore directions with real-time progress.",
+      "acceptanceCriteria": [
+        "phase=simulate일 때 SimulateView 렌더링",
+        "CandidateCard 3개 가로 나열, 각각 개별 프로그레스 바",
+        "SSE 스트림 연결: candidate event로 카드별 진행률 업데이트",
+        "AgentComment 영역에 comment event 실시간 표시",
+        "하단 맥락 요약 스트립",
+        "버튼 없음 (구경만)",
+        "완료 시 자동으로 deliver 화면 전환 (fade 애니메이션)",
+        "모바일: 카드 세로 스택",
+        "브라우저에서 시뮬레이션 진행 → 완료 → deliver 전환 확인 (cmux-browser)",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "concept.md Screen 2 참조"
+    },
+    {
+      "id": "US-012",
+      "title": "Screen 3: Deliver UI",
+      "description": "As a user, I want to see the best result with rationale and take action.",
+      "acceptanceCriteria": [
+        "phase=deliver일 때 DeliverView 렌더링",
+        "ResultDisplay: 선택된 결과물 마크다운 → HTML 렌더링 (중앙, 크게)",
+        "RationaleList: 근거 bullet 표시",
+        "ActionButtons: 저장 (토스트), 다운로드 (.md), 수정 요청, 처음부터 다시",
+        "AlternativeCandidates: 접기/펼치기로 나머지 후보 2개 확인",
+        "브라우저에서 결과 표시 + 모든 액션 버튼 동작 확인 (cmux-browser)",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "concept.md Screen 3 참조"
+    },
+    {
+      "id": "US-013",
+      "title": "수정 루프 + 다운로드",
+      "description": "As a user, I want to request revisions and download the final result.",
+      "acceptanceCriteria": [
+        "GET /api/projects/[id]/revision-options — 수정 선택지 생성 (Gemini Flash), 항상 '기타' 포함",
+        "POST /api/projects/[id]/revise — 선택한 옵션 저장 + round++ + phase → simulate",
+        "RevisionModal: 선택지 카드 + 기타 직접 입력 + 확인 버튼",
+        "수정 후 재시뮬레이션 → 새 결과 deliver",
+        "GET /api/projects/[id]/download — 선택된 결과물 .md 파일 다운로드",
+        "'처음부터 다시' 버튼: context 초기화 + phase → collect",
+        "브라우저에서 수정 요청 → 재시뮬 → 결과 확인 + 다운로드 확인 (cmux-browser)",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

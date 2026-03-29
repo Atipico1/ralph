@@ -1,0 +1,15 @@
+# Ralph runtime state
+.ralph/
+
+# Environment
+.env.local
+
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+
+# Database
+local.db
+*.db
