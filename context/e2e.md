@@ -7,7 +7,9 @@ Phase 1(태스크 루프)에서 개별 태스크가 통과해도, 전체 플로�
 
 ## 도구
 
-- **cmux-browser**: 브라우저 자동화 (스크린샷, DOM 인터랙션, 콘솔 에러 확인)
+- **agent-browser CLI**: 브라우저 자동화 (스크린샷, DOM 인터랙션, 콘솔 에러 확인)
+  - 사용법: `agent-browser --help` 로 확인
+  - 모든 E2E 테스트는 agent-browser CLI를 사용하여 실제 브라우저에서 검증
 - **로컬 dev 서버**: `npm run dev` (백그라운드)
 
 ## E2E 테스트 흐름
@@ -16,7 +18,7 @@ Phase 1(태스크 루프)에서 개별 태스크가 통과해도, 전체 플로�
 1. npm run dev & (백그라운드 실행)
 2. 서버 ready 대기 (localhost:3000 접근 가능할 때까지)
 3. prd.json의 모든 유저 스토리에 대해:
-   a. 해당 페이지로 cmux-browser 네비게이션
+   a. 해당 페이지로 agent-browser 네비게이션
    b. acceptance criteria 하나씩 검증
    c. 스크린샷 캡처 (증거)
    d. 브라우저 콘솔 에러 확인

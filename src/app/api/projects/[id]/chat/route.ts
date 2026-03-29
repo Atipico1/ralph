@@ -10,8 +10,7 @@ import {
 import {
   extractContext,
   shouldEndCollectionEarly,
-  streamNextQuestion,
-  nextQuestionSchema,
+  generateNextQuestion,
 } from '@/ai/collect';
 
 // ── Request schema ──────────────────────────────────────────────────────────
@@ -161,7 +160,7 @@ export async function POST(
           return;
         }
 
-        // 7. Generate next question (streaming)
+        // 7. Generate next question
         const conversationHistory = [
           ...existingMessages.map((m) => ({
             role: m.role as 'agent' | 'user',
@@ -170,35 +169,13 @@ export async function POST(
           { role: 'user' as const, content: message },
         ];
 
-        const streamResult = streamNextQuestion(
+        const nextQuestion = await generateNextQuestion(
           personaPrompt,
           conversationHistory,
           contextItems,
           newQuestionCount,
           project.maxQuestions,
         );
-
-        // Consume stream to completion, then parse structured output
-        const fullText = await streamResult.text;
-        const fallback = {
-          question: '혹시 더 알려주실 내용이 있으신가요?',
-          inputType: 'text' as const,
-          options: null,
-        };
-
-        let nextQuestion: {
-          question: string;
-          inputType: 'choice' | 'text' | 'yesno';
-          options: string[] | null;
-        };
-
-        try {
-          const parsed = JSON.parse(fullText) as unknown;
-          const validated = nextQuestionSchema.safeParse(parsed);
-          nextQuestion = validated.success ? validated.data : fallback;
-        } catch {
-          nextQuestion = fallback;
-        }
 
         // 8. Save agent message
         createMessage({

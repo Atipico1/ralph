@@ -318,3 +318,51 @@ Started: Sun Mar 29 11:57:30 KST 2026
 
 ## 03-29 14:28 US-012 DONE
 ---
+
+## 2026-03-29 — US-013
+- Created `src/ai/revise.ts`: generateRevisionOptions using Gemini Flash + Output.object
+  - Fallback to hardcoded options on AI failure
+  - Always ensures "기타 (직접 입력)" as last option
+- Created 4 new API routes:
+  - GET /api/projects/[id]/revision-options: AI-generated revision options
+  - POST /api/projects/[id]/revise: save revision + phase → simulate
+  - GET /api/projects/[id]/download: .md file download with Content-Disposition
+  - POST /api/projects/[id]/reset: full project reset (FK-ordered deletion)
+- Updated `src/ai/simulate.ts`: RevisionContext interface + buildRevisionCandidateUserPrompt
+- Updated simulate route: loads revision context when round > 1
+- Created `src/components/deliver/RevisionModal.tsx`: modal with option cards, custom input, ARIA a11y, Escape key
+- Updated ActionButtons: wired onRevise callback + reset API call
+- Updated DeliverView: modal state management
+- Added `getSelectedSimulation` helper to `queries.ts` (DRY: used by 3 routes)
+- Added Zod validation to revise route body parsing
+- Tests: 27 new contract tests (101 total), typecheck + lint clean
+- Files: src/ai/revise.ts, src/ai/simulate.ts, 4 route files, RevisionModal.tsx, ActionButtons.tsx, DeliverView.tsx, queries.ts, globals.css, revision-routes.test.ts
+- Learnings for future iterations:
+  - getSelectedSimulation helper eliminates repeated getMaxRound + getSimulationsByProjectAndRound + find pattern
+  - Modal a11y: role="dialog" + aria-modal + aria-labelledby + Escape key handler
+  - FK deletion order matters: delete revision_options before simulations (FK constraint)
+  - router.refresh() correctly triggers phase transition via server component re-execution
+  - Zod validation at route boundaries is more robust than type assertions
+---
+
+## 03-29 14:47 US-013 DONE
+---
+
+## 03-29 14:48 US-013 DONE
+---
+
+## 03-29 15:18 E2E Results
+  ✓ US-001
+  ✓ US-002
+  ✓ US-003
+  ✓ US-004
+  ✓ US-005
+  ✓ US-006
+  ✓ US-007
+  ✓ US-008
+  ✓ US-009
+  ✓ US-010
+  ✓ US-011
+  ✓ US-012
+  ✓ US-013
+---

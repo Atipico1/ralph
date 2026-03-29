@@ -47,6 +47,8 @@ Agent(
 | US-003 AI Provider | Vercel AI SDK + OpenRouter + Cerebras 연동법 |
 | US-006 채팅 엔드포인트 | Vercel AI SDK useChat + streamText + tool calling 패턴 |
 | US-010 Simulate SSE | 병렬 streamText + SSE 멀티플렉싱 패턴 |
+| US-014 파일 업로드 | FileReader + FormData + Vision API 패턴 |
+| US-015~016 UI 개선 | 한국어 UI best practices, 폰트/타이포그래피, 화면 전환 애니메이션, 21st.dev 컴포넌트 활용법 |
 
 ### 리서치 도구 우선순위
 

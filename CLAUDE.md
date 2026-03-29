@@ -85,7 +85,7 @@ Phase 1: 태스크 루프 (context/research.md + context/testing.md 주입)
   → TASK_PASS / TASK_FAIL
 
 Phase 2: E2E 검증 (context/e2e.md 주입)
-  → cmux-browser로 모든 유저 스토리 브라우저 검증
+  → agent-browser로 모든 유저 스토리 브라우저 검증
   → E2E_PASS / E2E_FAIL → 수정 루프
 
 Phase 3: 배포 (context/deploy.md 참조)
@@ -139,17 +139,32 @@ Phase 3: 배포 (context/deploy.md 참조)
 ## 프론트엔드 구현
 
 프론트엔드(UI/UX) 태스크는 반드시 **ui-ux-pro-max** 스킬을 사용한다.
-컴포넌트 설계, 레이아웃, 스타일링, 인터랙션 구현 시 이 스킬을 먼저 호출할 것.
 UI 컴포넌트는 **21st.dev Magic MCP**로 생성한다 (`/ui` 명령).
+
+### UI 품질 기준 (팬시해야 함)
+
+구현 전 한국어 서비스 UI best practice를 리서치할 것 (토스, 당근, 카카오 참고).
+
+- **폰트**: Pretendard. 본문 16px, 제목 24~32px, 캡션 13px
+- **폰트 웨이트**: 제목 semibold(600), 본문 regular(400), 강조 medium(500)
+- **행간**: 본문 1.6~1.8, 제목 1.3
+- **화면 전환**: fade + slide, 200~300ms, ease-out
+- **카드**: rounded-xl(12~16px), shadow-sm~md, hover 효과
+- **스페이싱**: 4px 단위 일관성
+- **버튼**: 최소 44x44px 터치 영역, disabled/loading 상태 명확
+- **반응형**: 375px 모바일에서 정상
+- **빈 상태/로딩**: 스켈레톤 또는 스피너, 빈 상태 가이드 메시지
 
 ## 브라우저 테스트
 
-프론트엔드 테스트, UI 검증, E2E 테스트는 **cmux-browser**를 사용한다.
+프론트엔드 테스트, UI 검증, E2E 테스트는 **agent-browser CLI**를 사용한다.
+사용법은 `agent-browser --help`로 확인.
 
-- UI 변경이 포함된 태스크는 반드시 cmux-browser로 브라우저에서 검증할 것
-- `npm run dev`로 로컬 서버를 띄운 후 cmux-browser로 접근
-- 스크린샷 캡처, DOM 인터랙션, 콘솔 에러 확인 모두 cmux-browser로 수행
-- acceptance criteria에 "브라우저에서 확인" 항목이 있으면 cmux-browser 검증 필수
+- UI 변경이 포함된 태스크는 반드시 agent-browser로 브라우저에서 검증할 것
+- `npm run dev`로 로컬 서버를 띄운 후 agent-browser로 접근
+- 스크린샷 캡처, DOM 인터랙션, 콘솔 에러 확인 모두 agent-browser로 수행
+- acceptance criteria에 "브라우저에서 확인" 항목이 있으면 agent-browser 검증 필수
+- 모든 유저 스토리에 대해 빠짐없이 테스트 (하나도 스킵 금지)
 
 ## Build & Test
 
@@ -201,6 +216,6 @@ Ralph Loop 서브에이전트: `claude-opus-4-6`
 | DB | SQLite + Drizzle ORM | Prisma, TypeORM |
 | AI SDK | Vercel AI SDK (`ai`) | LangChain, 직접 fetch |
 | AI Provider | OpenRouter + Cerebras | 직접 Google/Anthropic API |
-| 브라우저 테스트 | cmux-browser | Playwright, Cypress |
+| 브라우저 테스트 | agent-browser | Playwright, Cypress |
 
 코드 리뷰 시 위 목록과 다른 모델명/라이브러리가 사용되면 **즉시 reject**.

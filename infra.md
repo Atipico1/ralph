@@ -10,7 +10,7 @@
 | ORM | Drizzle ORM | SQLite 드라이버, 마이그레이션 간단 |
 | UI 컴포넌트 | 21st.dev Magic MCP | `/ui` 명령으로 컴포넌트 생성 |
 | 스타일링 | Tailwind CSS | 21st.dev 컴포넌트와 호환 |
-| 브라우저 자동화 | cmux-browser / Playwright MCP | 스크린샷 캡처, UI 인터랙션 |
+| 브라우저 자동화 | agent-browser CLI | 스크린샷 캡처, UI 인터랙션 |
 | UI 검증 | 스크린샷 + Claude Vision | 시각적 깨짐 자동 탐지 |
 
 ## 환경

@@ -13,3 +13,6 @@ node_modules/
 # Database
 local.db
 *.db
+*.db-shm
+*.db-wal
+tsconfig.tsbuildinfo

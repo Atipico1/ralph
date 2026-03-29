@@ -23,7 +23,7 @@ vi.mock('@/db/queries', () => ({
 
 const mockExtractContext = vi.fn();
 const mockShouldEndCollectionEarly = vi.fn();
-const mockStreamNextQuestion = vi.fn();
+const mockGenerateNextQuestion = vi.fn();
 
 vi.mock('@/ai/collect', async () => {
   const actual = await vi.importActual<typeof import('@/ai/collect')>('@/ai/collect');
@@ -31,7 +31,7 @@ vi.mock('@/ai/collect', async () => {
     ...actual,
     extractContext: (...args: unknown[]) => mockExtractContext(...args),
     shouldEndCollectionEarly: (...args: unknown[]) => mockShouldEndCollectionEarly(...args),
-    streamNextQuestion: (...args: unknown[]) => mockStreamNextQuestion(...args),
+    generateNextQuestion: (...args: unknown[]) => mockGenerateNextQuestion(...args),
   };
 });
 
@@ -115,12 +115,10 @@ describe('POST /api/projects/[id]/chat (contract tests)', () => {
     mockUpdateProject.mockReturnValue(undefined);
     mockExtractContext.mockResolvedValue({ contexts: [{ key: 'role', value: '백엔드 개발자' }] });
     mockShouldEndCollectionEarly.mockResolvedValue(false);
-    mockStreamNextQuestion.mockReturnValue({
-      text: Promise.resolve(JSON.stringify({
-        question: '경력은 얼마나 되시나요?',
-        inputType: 'choice',
-        options: ['1년 미만', '1-3년', '3-5년', '5년 이상', '기타 (직접 입력)'],
-      })),
+    mockGenerateNextQuestion.mockResolvedValue({
+      question: '경력은 얼마나 되시나요?',
+      inputType: 'choice',
+      options: ['1년 미만', '1-3년', '3-5년', '5년 이상', '기타 (직접 입력)'],
     });
   });
 
