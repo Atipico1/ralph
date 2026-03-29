@@ -20,6 +20,11 @@ import {
   type RevisionContext,
   type EvaluationResult,
 } from '@/ai/simulate';
+import {
+  firecrawlSearch,
+  buildSearchQuery,
+  formatSearchResultsForPrompt,
+} from '@/ai/firecrawl';
 
 // ── SSE helpers ─────────────────────────────────────────────────────────────
 
@@ -105,9 +110,21 @@ export async function POST(
   // Start async work (does not block response)
   (async () => {
     try {
+      // Web research before candidate generation (graceful skip on failure)
+      const searchQuery = buildSearchQuery(contexts);
+      const searchResults = await firecrawlSearch(searchQuery);
+      const webSearchContext = formatSearchResultsForPrompt(searchResults);
+
       // Start 3 parallel streamText calls
       const streams = angles.map((angle, index) =>
-        generateCandidate(index, personaPrompt, contexts, angle, revisionCtx),
+        generateCandidate(
+          index,
+          personaPrompt,
+          contexts,
+          angle,
+          revisionCtx,
+          webSearchContext || undefined,
+        ),
       );
 
       // Accumulated content for each candidate

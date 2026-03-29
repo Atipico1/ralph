@@ -144,12 +144,13 @@ export interface ConversationMessage {
 // Shared prompt builder
 // ---------------------------------------------------------------------------
 
-function buildQuestionPrompt(
+export function buildQuestionPrompt(
   personaPrompt: string,
   conversationHistory: ConversationMessage[],
   collectedContexts: CollectedContextItem[],
   questionCount: number,
   maxQuestions: number,
+  webSearchContext?: string,
 ): { system: string; prompt: string } {
   const historyText = conversationHistory
     .map((m) => `${m.role === 'agent' ? '에이전트' : '유저'}: ${m.content}`)
@@ -160,6 +161,12 @@ function buildQuestionPrompt(
       ? collectedContexts.map((c) => `- ${c.key}: ${c.value}`).join('\n')
       : '(아직 수집된 정보 없음)';
 
+  const webSearchNote = webSearchContext
+    ? `\n- 아래 웹 검색 결과를 참고하여 더 구체적이고 맥락에 맞는 질문을 생성하세요.`
+    : '';
+
+  const webSearchSection = webSearchContext ?? '';
+
   return {
     system: `${personaPrompt}
 
@@ -169,8 +176,8 @@ function buildQuestionPrompt(
 - inputType이 "text" 또는 "yesno"이면 options는 null이어야 합니다.
 - 질문은 한국어로, 친근하고 전문적인 톤으로 작성하세요.
 - 이전에 물어본 내용과 중복되지 않게 하세요.
-- 현재 ${questionCount}/${maxQuestions} 질문 완료. 남은 질문 수를 고려해서 가장 중요한 것부터 물어보세요.`,
-    prompt: `대화 히스토리:\n${historyText}\n\n수집된 컨텍스트:\n${contextSummary}`,
+- 현재 ${questionCount}/${maxQuestions} 질문 완료. 남은 질문 수를 고려해서 가장 중요한 것부터 물어보세요.${webSearchNote}`,
+    prompt: `대화 히스토리:\n${historyText}\n\n수집된 컨텍스트:\n${contextSummary}${webSearchSection}`,
   };
 }
 
@@ -184,6 +191,7 @@ export async function generateNextQuestion(
   collectedContexts: CollectedContextItem[],
   questionCount: number,
   maxQuestions: number,
+  webSearchContext?: string,
 ): Promise<NextQuestion> {
   const { system, prompt } = buildQuestionPrompt(
     personaPrompt,
@@ -191,6 +199,7 @@ export async function generateNextQuestion(
     collectedContexts,
     questionCount,
     maxQuestions,
+    webSearchContext,
   );
 
   try {

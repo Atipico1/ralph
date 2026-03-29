@@ -40,6 +40,14 @@ vi.mock('@/ai/simulate', async () => {
   };
 });
 
+// ── Mock Firecrawl ─────────────────────────────────────────────────────────
+
+vi.mock('@/ai/firecrawl', () => ({
+  firecrawlSearch: vi.fn().mockResolvedValue([]),
+  buildSearchQuery: vi.fn().mockReturnValue(''),
+  formatSearchResultsForPrompt: vi.fn().mockReturnValue(''),
+}));
+
 // ── Import route AFTER mocks ────────────────────────────────────────────────
 
 import { POST } from '@/app/api/projects/[id]/simulate/route';

@@ -12,6 +12,11 @@ import {
   shouldEndCollectionEarly,
   generateNextQuestion,
 } from '@/ai/collect';
+import {
+  firecrawlSearch,
+  buildSearchQuery,
+  formatSearchResultsForPrompt,
+} from '@/ai/firecrawl';
 
 // ── Request schema ──────────────────────────────────────────────────────────
 
@@ -160,7 +165,12 @@ export async function POST(
           return;
         }
 
-        // 7. Generate next question
+        // 7. Web search for context (graceful skip on failure)
+        const searchQuery = buildSearchQuery(contextItems, message);
+        const searchResults = await firecrawlSearch(searchQuery);
+        const webSearchContext = formatSearchResultsForPrompt(searchResults);
+
+        // 8. Generate next question
         const conversationHistory = [
           ...existingMessages.map((m) => ({
             role: m.role as 'agent' | 'user',
@@ -175,9 +185,10 @@ export async function POST(
           contextItems,
           newQuestionCount,
           project.maxQuestions,
+          webSearchContext || undefined,
         );
 
-        // 8. Save agent message
+        // 9. Save agent message
         const agentMessage = createMessage({
           projectId: id,
           role: 'agent',

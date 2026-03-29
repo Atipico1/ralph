@@ -93,18 +93,22 @@ export function buildCandidateSystemPrompt(
 - ${angle.instruction}
 - 수집된 정보를 모두 반영하여 완성도 높은 결과물을 작성하세요.
 - 결과물은 한국어로, 마크다운 형식으로 작성하세요.
+- 웹 검색 참고 자료가 제공되면, 근거 있는 데이터와 출처를 결과물에 포함하세요.
 - 작성 중 떠오르는 생각이 있으면 add_comment 도구를 사용해서 한 문장으로 코멘트하세요.
 - 코멘트는 혼잣말 톤으로 ("이 방향이 타겟층에 잘 맞는데...", "예산 고려하면 이게 더 낫겠다" 등)`;
 }
 
 export function buildCandidateUserPrompt(
   contexts: CollectedContextItem[],
+  webSearchContext?: string,
 ): string {
   const contextText = contexts
     .map((c) => `- ${c.key}: ${c.value}`)
     .join('\n');
 
-  return `수집된 정보:\n${contextText}\n\n위 정보를 바탕으로 최선의 결과물을 작성해주세요.`;
+  const webSection = webSearchContext ?? '';
+
+  return `수집된 정보:\n${contextText}${webSection}\n\n위 정보를 바탕으로 최선의 결과물을 작성해주세요.`;
 }
 
 export interface RevisionContext {
@@ -171,10 +175,12 @@ export function generateCandidate(
   contexts: CollectedContextItem[],
   angle: ApproachAngle,
   revision?: RevisionContext,
+  webSearchContext?: string,
 ) {
+  // Revision rounds focus on feedback, not new web data — webSearchContext is intentionally omitted
   const prompt = revision
     ? buildRevisionCandidateUserPrompt(contexts, revision)
-    : buildCandidateUserPrompt(contexts);
+    : buildCandidateUserPrompt(contexts, webSearchContext);
 
   const result = streamText({
     model: simulationModel(),
