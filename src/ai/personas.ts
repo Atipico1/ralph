@@ -33,7 +33,8 @@ const COMMON_PERSONA_RULES = `
 // Preset Personas
 // ---------------------------------------------------------------------------
 
-const PRESET_PERSONAS: Record<string, string> = {
+// Note: content_creator is intentionally absent — it uses dynamic persona generation
+const PRESET_PERSONAS: Partial<Record<DomainKey, string>> = {
   career_coach: `당신은 수많은 이력서와 자기소개서를 검토해온 시니어 커리어 코치입니다.
 
 "제가 많은 지원서를 봐왔는데요" — 이 톤으로 대화하세요.
@@ -71,8 +72,10 @@ const PRESET_DOMAIN_KEYS = new Set(Object.keys(PRESET_PERSONAS));
 // classifyDomain — classify user's first input into a domain via Gemini Flash
 // ---------------------------------------------------------------------------
 
+const DOMAIN_KEYS = DOMAIN_ROUTES.map((r) => r.key);
+
 const classifySchema = z.object({
-  domain: z.string().describe('분류된 도메인 key (career_coach, business_consultant, travel_planner, content_creator, custom 중 하나)'),
+  domain: z.enum(DOMAIN_KEYS as unknown as [string, ...string[]]),
 });
 
 export async function classifyDomain(
@@ -99,13 +102,12 @@ ${domainDescriptions}`,
       return { domain: 'custom', isPreset: false };
     }
 
-    const domain = output.domain as DomainKey;
-    const validKeys = new Set<string>(DOMAIN_ROUTES.map((r) => r.key));
-
-    if (!validKeys.has(domain)) {
+    const rawDomain = output.domain;
+    if (!DOMAIN_KEYS.includes(rawDomain as typeof DOMAIN_KEYS[number])) {
       return { domain: 'custom', isPreset: false };
     }
 
+    const domain = rawDomain as DomainKey;
     return {
       domain,
       isPreset: PRESET_DOMAIN_KEYS.has(domain),
@@ -170,7 +172,7 @@ export async function getPersonaPrompt(
   domain: string,
   input: string,
 ): Promise<string> {
-  const preset = PRESET_PERSONAS[domain];
+  const preset = PRESET_PERSONAS[domain as DomainKey];
   if (preset) {
     return preset;
   }
