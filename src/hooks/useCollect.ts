@@ -109,6 +109,45 @@ export function useCollect(
 
       setIsLoading(true);
       setError(null);
+      setCurrentQuestion(null);
+
+      function handleFrame(frame: SSEFrame) {
+        try {
+          switch (frame.event) {
+            case 'context': {
+              const parsed = JSON.parse(frame.data) as SSEContextEvent;
+              if (parsed.contexts.length > 0) {
+                setContexts((prev) => [...prev, ...parsed.contexts]);
+              }
+              break;
+            }
+            case 'question': {
+              const parsed = JSON.parse(frame.data) as SSEQuestionEvent;
+              setCurrentQuestion({
+                question: parsed.question,
+                inputType: parsed.inputType,
+                options: parsed.options,
+                questionCount: parsed.questionCount,
+              });
+              break;
+            }
+            case 'done': {
+              const parsed = JSON.parse(frame.data) as SSEDoneEvent;
+              if (parsed.done) {
+                setIsDone(true);
+              }
+              break;
+            }
+            case 'error': {
+              const parsed = JSON.parse(frame.data) as SSEErrorEvent;
+              setError(parsed.error);
+              break;
+            }
+          }
+        } catch {
+          // Malformed SSE data — skip frame silently
+        }
+      }
 
       try {
         const res = await fetch(`/api/projects/${projectId}/chat`, {
@@ -146,38 +185,7 @@ export function useCollect(
           buffer = remainder;
 
           for (const frame of frames) {
-            switch (frame.event) {
-              case 'context': {
-                const parsed = JSON.parse(frame.data) as SSEContextEvent;
-                if (parsed.contexts.length > 0) {
-                  setContexts((prev) => [...prev, ...parsed.contexts]);
-                }
-                break;
-              }
-              case 'question': {
-                const parsed = JSON.parse(frame.data) as SSEQuestionEvent;
-                setCurrentQuestion({
-                  question: parsed.question,
-                  inputType: parsed.inputType,
-                  options: parsed.options,
-                  questionCount: parsed.questionCount,
-                });
-                break;
-              }
-              case 'done': {
-                // Verify it's actually done
-                const parsed = JSON.parse(frame.data) as SSEDoneEvent;
-                if (parsed.done) {
-                  setIsDone(true);
-                }
-                break;
-              }
-              case 'error': {
-                const parsed = JSON.parse(frame.data) as SSEErrorEvent;
-                setError(parsed.error);
-                break;
-              }
-            }
+            handleFrame(frame);
           }
         }
 
@@ -185,37 +193,7 @@ export function useCollect(
         if (buffer.trim()) {
           const { frames } = parseSSEFrames(buffer + '\n\n');
           for (const frame of frames) {
-            switch (frame.event) {
-              case 'context': {
-                const parsed = JSON.parse(frame.data) as SSEContextEvent;
-                if (parsed.contexts.length > 0) {
-                  setContexts((prev) => [...prev, ...parsed.contexts]);
-                }
-                break;
-              }
-              case 'question': {
-                const parsed = JSON.parse(frame.data) as SSEQuestionEvent;
-                setCurrentQuestion({
-                  question: parsed.question,
-                  inputType: parsed.inputType,
-                  options: parsed.options,
-                  questionCount: parsed.questionCount,
-                });
-                break;
-              }
-              case 'done': {
-                const parsed = JSON.parse(frame.data) as SSEDoneEvent;
-                if (parsed.done) {
-                  setIsDone(true);
-                }
-                break;
-              }
-              case 'error': {
-                const parsed = JSON.parse(frame.data) as SSEErrorEvent;
-                setError(parsed.error);
-                break;
-              }
-            }
+            handleFrame(frame);
           }
         }
       } catch (err: unknown) {

@@ -43,7 +43,7 @@ export default function ChoiceInput({
     <div className="flex w-full flex-col gap-3">
       {options.map((option, index) => (
         <button
-          key={index}
+          key={option}
           type="button"
           onClick={() => handleOptionClick(index)}
           disabled={disabled}
