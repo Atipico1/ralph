@@ -15,6 +15,7 @@ Next.js + TypeScript + SQLite(Drizzle ORM) 프로젝트. 기술 스택은 `infra
 - `resources/21stdev.md` — 21st.dev MCP 사용법
 - `resources/cerebras.md` — Cerebras 관련
 - `resources/firecrawl.md` — Firecrawl 관련
+- `resources/dicebear.md` — DiceBear 아바타 라이브러리 (에이전트 캐릭터 UI)
 
 ## 문서 참조 방법
 
