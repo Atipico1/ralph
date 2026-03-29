@@ -12,6 +12,13 @@ Started: Sun Mar 29 11:57:30 KST 2026
 - Cerebras model ID: `zai-glm-4.7` (NOT `glm-4.7`), base URL: `https://api.cerebras.ai/v1`
 - AI providers use lazy init pattern (functions, not module-level constants) to avoid build-time env var failures
 - ESLint: `next lint` deprecated in Next.js 16, migrate to flat config when upgrading
+- SSE parser: shared `parseSSEFrames` in `src/lib/sse-parser.ts` — both useCollect and useSimulate import from here
+- Custom animations: Tailwind v4 `@keyframes` at top level + `@utility animate-xxx { animation: ... }` in globals.css
+- Fade-out transition: `animation: ... forwards` (fill mode) prevents flash back, use setTimeout matching duration for router.refresh()
+- React Strict Mode: mount-triggered effects fire twice in dev — use `useRef` boolean guard for side-effectful API calls
+- Markdown rendering: `marked` + `@tailwindcss/typography` (`@plugin` directive in CSS), centralized in `src/lib/markdown.ts`
+- File download: client-side Blob API pattern in `src/lib/download.ts` — no server route needed
+- Toast: zero-dep hook (`useToast`) + component pattern with enter/exit CSS animations
 
 ## 2026-03-29 — US-001
 - Next.js App Router + TypeScript strict + Tailwind v4 initialized
@@ -243,4 +250,71 @@ Started: Sun Mar 29 11:57:30 KST 2026
   - tool() with execute function + maxSteps: 2 allows model to continue after tool call
   - TransformStream pattern: return Response(readable) immediately, write to writable async
   - Map lookup for index mapping is cleaner than repeated findIndex
+---
+
+## 03-29 13:59 US-010 DONE
+---
+
+## 2026-03-29 — US-011
+- Created `src/hooks/useSimulate.ts`: SSE hook for simulate endpoint (auto-start on mount)
+  - Handles 5 event types: candidate, comment, evaluation, done, error
+  - React Strict Mode double-fire guard via startedRef
+- Created `src/components/simulate/SimulateView.tsx`: main simulate view
+  - "검토 중" header with overall progress bar (doneCount/3)
+  - Responsive grid (grid-cols-1 md:grid-cols-3) for 3 CandidateCards
+  - AgentComment area, context summary strip
+  - No buttons (view only)
+  - Auto-transition: 1.5s delay → fade-out (0.5s) → router.refresh()
+- Created `src/components/simulate/CandidateCard.tsx`: individual candidate card
+  - "방향 A/B/C: 감성적/실용적/창의적 접근" labels
+  - Indeterminate progress bar (streaming) → full green (done) → red (error)
+  - Selected badge after evaluation
+- Created `src/components/simulate/AgentComment.tsx`: real-time comment display
+  - [A안]/[B안]/[C안] prefixed, italic, auto-scroll
+- Extracted `src/lib/sse-parser.ts`: shared parseSSEFrames (DRY, from useCollect + useSimulate)
+- Updated `src/app/globals.css`: 3 new animations (page-fade-out, simulate-enter, simulate-progress)
+- Updated `src/app/project/[id]/page.tsx`: routes simulate phase to SimulateView with contexts
+- TypeScript typecheck + ESLint + tests: 74/74 pass
+- Learnings for future iterations:
+  - Mount-triggered useEffect needs Strict Mode guard for API calls (useRef boolean)
+  - SSE parser should be shared module — avoid copy-paste between hooks
+  - `animation: ... forwards` fill mode essential for fade-out (prevents flash)
+  - router.refresh() re-executes server component — good for phase transitions
+---
+
+## 03-29 14:12 US-011 DONE
+---
+
+## 03-29 14:13 US-011 DONE
+---
+
+## 2026-03-29 — US-012
+- Created `src/components/deliver/DeliverView.tsx`: main deliver view with phase completion header
+  - "완료 ✓" header with green progress bar
+  - "이렇게 하는 게 가장 좋겠어요" heading
+  - Composes ResultDisplay, RationaleList, ActionButtons, AlternativeCandidates, Toast
+- Created `src/components/deliver/ResultDisplay.tsx`: markdown → HTML via `marked` + `prose` classes
+- Created `src/components/deliver/RationaleList.tsx`: parses rationale text into bullet items
+- Created `src/components/deliver/ActionButtons.tsx`: 4 action buttons
+  - 저장: shows toast "저장되었습니다"
+  - 다운로드: client-side .md file download
+  - 수정 요청: placeholder (US-013 scope)
+  - 처음부터 다시: window.confirm + router.push('/')
+- Created `src/components/deliver/AlternativeCandidates.tsx`: two-level collapse (section + per-card)
+- Created `src/lib/markdown.ts`: centralized marked config (breaks + gfm)
+- Created `src/lib/download.ts`: Blob-based .md file download
+- Created `src/hooks/useToast.ts`: zero-dep toast with timer cleanup on unmount
+- Created `src/components/Toast.tsx`: fixed-position bottom-center toast with animations
+- Updated `src/app/project/[id]/page.tsx`: deliver phase routing with latest-round simulation filtering
+- Updated `src/app/globals.css`: @plugin @tailwindcss/typography + deliver-enter + toast animations
+- TypeScript typecheck + ESLint + 74/74 tests pass
+- Learnings for future iterations:
+  - `marked` v17+ ships own types — do NOT install `@types/marked`
+  - `marked.setOptions` is global mutation — centralize in one module, import from there
+  - `@tailwindcss/typography` in Tailwind v4: use `@plugin "@tailwindcss/typography"` (not JS config)
+  - Timer cleanup on unmount: always add `useEffect` cleanup for setTimeout refs
+  - Client-side file download via Blob is simpler than a server route when data is already in client state
+---
+
+## 03-29 14:28 US-012 DONE
 ---

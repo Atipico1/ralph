@@ -3,9 +3,11 @@ import {
   getProject,
   getMessagesByProject,
   getCollectedContextByProject,
+  getSimulationsByProject,
 } from '@/db/queries';
 import CollectView from '@/components/collect/CollectView';
 import SimulateView from '@/components/simulate/SimulateView';
+import DeliverView from '@/components/deliver/DeliverView';
 import type { Question } from '@/hooks/useCollect';
 
 interface ProjectPageProps {
@@ -73,13 +75,35 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     return <SimulateView projectId={project.id} contexts={contexts} />;
   }
 
-  // ── Deliver phase (placeholder) ───────────────────────────────────────────
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-2xl font-bold">{project.title}</h1>
-      <p className="mt-4 text-gray-600">
-        전달 단계입니다. 곧 구현될 예정입니다.
-      </p>
-    </main>
-  );
+  // ── Deliver phase ──────────────────────────────────────────────────────────
+  {
+    const allSimulations = getSimulationsByProject(id);
+    // Get the latest round
+    const maxRound = allSimulations.reduce(
+      (max, s) => Math.max(max, s.round),
+      0,
+    );
+    // Filter to only the latest round's simulations
+    const latestSimulations = allSimulations.filter(
+      (s) => s.round === maxRound,
+    );
+
+    const simulationData = latestSimulations.map((s) => ({
+      id: s.id,
+      label: s.label,
+      summary: s.summary,
+      content: s.content,
+      rationale: s.rationale,
+      score: s.score,
+      isSelected: s.isSelected,
+    }));
+
+    return (
+      <DeliverView
+        projectId={project.id}
+        projectTitle={project.title}
+        simulations={simulationData}
+      />
+    );
+  }
 }
