@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
+import { parseSSEFrames, type SSEFrame } from '@/lib/sse-parser';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -47,43 +48,6 @@ export interface UseCollectReturn {
   goBack: () => void;
   canGoBack: boolean;
   skip: () => Promise<void>;
-}
-
-// ── SSE Line Parser ─────────────────────────────────────────────────────────
-
-interface SSEFrame {
-  event: string;
-  data: string;
-}
-
-function parseSSEFrames(raw: string): { frames: SSEFrame[]; remainder: string } {
-  const frames: SSEFrame[] = [];
-  // Split by double newline (SSE frame delimiter)
-  const parts = raw.split('\n\n');
-  // Last part may be incomplete
-  const remainder = parts.pop() ?? '';
-
-  for (const part of parts) {
-    const trimmed = part.trim();
-    if (!trimmed) continue;
-
-    let event = '';
-    let data = '';
-
-    for (const line of trimmed.split('\n')) {
-      if (line.startsWith('event: ')) {
-        event = line.slice(7);
-      } else if (line.startsWith('data: ')) {
-        data = line.slice(6);
-      }
-    }
-
-    if (event && data) {
-      frames.push({ event, data });
-    }
-  }
-
-  return { frames, remainder };
 }
 
 // ── Hook ────────────────────────────────────────────────────────────────────

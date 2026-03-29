@@ -5,6 +5,7 @@ import {
   getCollectedContextByProject,
 } from '@/db/queries';
 import CollectView from '@/components/collect/CollectView';
+import SimulateView from '@/components/simulate/SimulateView';
 import type { Question } from '@/hooks/useCollect';
 
 interface ProjectPageProps {
@@ -61,16 +62,15 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     );
   }
 
-  // ── Simulate phase (placeholder) ──────────────────────────────────────────
+  // ── Simulate phase ────────────────────────────────────────────────────────
   if (project.phase === 'simulate') {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-24">
-        <h1 className="text-2xl font-bold">{project.title}</h1>
-        <p className="mt-4 text-gray-600">
-          시뮬레이션 단계입니다. 곧 구현될 예정입니다.
-        </p>
-      </main>
-    );
+    const collectedContextRows = getCollectedContextByProject(id);
+    const contexts = collectedContextRows.map((c) => ({
+      key: c.key,
+      value: c.value,
+    }));
+
+    return <SimulateView projectId={project.id} contexts={contexts} />;
   }
 
   // ── Deliver phase (placeholder) ───────────────────────────────────────────
