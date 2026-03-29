@@ -36,8 +36,12 @@ export function getProject(id: string): Project | undefined {
     .get();
 }
 
-export function listProjects(): Project[] {
-  return db.select().from(projects).orderBy(desc(projects.createdAt)).all();
+export function listProjects(limit?: number): Project[] {
+  const query = db.select().from(projects).orderBy(desc(projects.createdAt));
+  if (limit !== undefined) {
+    return query.limit(limit).all();
+  }
+  return query.all();
 }
 
 export function updateProject(
