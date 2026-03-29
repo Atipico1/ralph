@@ -1,6 +1,6 @@
 import { generateText, Output, NoObjectGeneratedError } from 'ai';
 import { z } from 'zod';
-import { mainAgentModel, collectModel } from '@/ai/providers';
+import { collectModel } from '@/ai/providers';
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -54,7 +54,7 @@ export async function extractContext(
 
   try {
     const { experimental_output: output } = await generateText({
-      model: mainAgentModel(),
+      model: collectModel(),
       experimental_output: Output.object({ schema: extractedContextSchema }),
       system: `${personaPrompt}
 
@@ -105,7 +105,7 @@ export async function shouldEndCollectionEarly(
 
   try {
     const { experimental_output: output } = await generateText({
-      model: mainAgentModel(),
+      model: collectModel(),
       experimental_output: Output.object({ schema: shouldEndSchema }),
       system: `${personaPrompt}
 

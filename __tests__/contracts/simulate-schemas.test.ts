@@ -108,9 +108,9 @@ describe('Simulate AI schemas (contract tests)', () => {
 
 describe('Simulate pure logic', () => {
   describe('getApproachAngles', () => {
-    it('returns 3 approach angles', () => {
+    it('returns 5 approach angles', () => {
       const angles = getApproachAngles('career_coach');
-      expect(angles).toHaveLength(3);
+      expect(angles).toHaveLength(5);
     });
 
     it('each angle has label and instruction', () => {
@@ -124,7 +124,7 @@ describe('Simulate pure logic', () => {
     it('labels are distinct', () => {
       const angles = getApproachAngles('travel_planner');
       const labels = angles.map((a) => a.label);
-      expect(new Set(labels).size).toBe(3);
+      expect(new Set(labels).size).toBe(5);
     });
   });
 

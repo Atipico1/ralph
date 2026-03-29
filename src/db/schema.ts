@@ -16,6 +16,7 @@ export const projects = sqliteTable('projects', {
     .default('collect'),
   maxQuestions: integer('max_questions').notNull().default(10),
   questionCount: integer('question_count').notNull().default(0),
+  questionPlan: text('question_plan'),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),

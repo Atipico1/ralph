@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.env*
+*.db
+uploads
+.ralph
+.claude
+__tests__
+coverage
+*.md
+!README.md

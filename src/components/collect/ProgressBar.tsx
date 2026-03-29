@@ -14,14 +14,18 @@ export default function ProgressBar({
 
   return (
     <div className="w-full">
-      <p className="mb-2 text-sm font-medium text-gray-500">
-        상담 {questionCount}/{maxQuestions}
-      </p>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+      {/* Track only — no step counter */}
+      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-surface-tertiary">
         <div
-          className="h-full rounded-full bg-blue-500 transition-all duration-500 ease-out"
+          className="relative h-full rounded-full bg-zinc-900 transition-all duration-700 ease-out"
           style={{ width: `${clampedProgress}%` }}
-        />
+        >
+          {clampedProgress > 0 && clampedProgress < 100 && (
+            <div className="absolute inset-0 overflow-hidden rounded-full">
+              <div className="animate-shimmer absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent bg-[length:200%_100%]" />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

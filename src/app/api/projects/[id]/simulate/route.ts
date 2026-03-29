@@ -21,14 +21,57 @@ import {
   type EvaluationResult,
 } from '@/ai/simulate';
 import {
-  agenticSearch,
-  formatAgenticResultsForPrompt,
-} from '@/ai/agentic-search';
+  firecrawlSearch,
+  formatSearchResultsForPrompt,
+  type SearchResult,
+} from '@/ai/firecrawl';
+import { generateText, Output, NoObjectGeneratedError } from 'ai';
+import { z } from 'zod';
+import { collectModel } from '@/ai/providers';
 
 // ── SSE helpers ─────────────────────────────────────────────────────────────
 
 function sseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+// ── Generate search queries via Cerebras ────────────────────────────────────
+
+const searchQueriesSchema = z.object({
+  queries: z.array(z.string().describe('검색 쿼리')).describe('검색 쿼리 3개'),
+});
+
+async function generateSearchQueries(
+  contexts: CollectedContextItem[],
+  domain: string | null,
+): Promise<string[]> {
+  const contextText = contexts.map((c) => `- ${c.key}: ${c.value}`).join('\n');
+
+  try {
+    const { experimental_output: output } = await generateText({
+      model: collectModel(),
+      experimental_output: Output.object({ schema: searchQueriesSchema }),
+      system: `당신은 웹 검색 쿼리 생성기입니다. 주어진 맥락을 바탕으로 결과물 생성에 도움이 될 검색 쿼리 3개를 만드세요.
+
+[규칙]
+- 각 쿼리는 서로 다른 관점에서 정보를 수집할 수 있도록 다양하게 생성하세요.
+- 한국어와 영어 쿼리를 적절히 섞으세요.
+- 각 쿼리는 구체적이고 검색 엔진에 최적화된 형태로 작성하세요.
+- 최대 200자 이내로 작성하세요.`,
+      prompt: `도메인: ${domain ?? '일반'}\n\n수집된 맥락:\n${contextText}`,
+    });
+
+    if (!output || output.queries.length === 0) {
+      return [contexts.map((c) => c.value).slice(0, 3).join(' ')];
+    }
+
+    return output.queries.slice(0, 3).map((q) => q.slice(0, 200));
+  } catch (error: unknown) {
+    if (NoObjectGeneratedError.isInstance(error)) {
+      return [contexts.map((c) => c.value).slice(0, 3).join(' ')];
+    }
+    return [contexts.map((c) => c.value).slice(0, 3).join(' ')];
+  }
 }
 
 // ── POST /api/projects/[id]/simulate ────────────────────────────────────────
@@ -109,11 +152,20 @@ export async function POST(
   // Start async work (does not block response)
   (async () => {
     try {
-      // Agentic web research: ReAct loop (search → reflect → search → ...)
-      const agenticResult = await agenticSearch(contexts);
-      const webSearchContext = formatAgenticResultsForPrompt(agenticResult);
+      // 1. Generate search queries (Cerebras, ~0.5s) then fire parallel searches
+      const searchQueries = await generateSearchQueries(contexts, domain);
 
-      // Start 3 parallel streamText calls
+      // All searches in parallel (each returns SearchResult[])
+      const searchPromises = searchQueries.map((q) =>
+        firecrawlSearch(q).catch(() => [] as SearchResult[]),
+      );
+
+      // Wait for all searches (fast — just HTTP calls, no AI)
+      const searchResults = await Promise.all(searchPromises);
+      const allResults = deduplicateByUrl(searchResults.flat());
+      const webSearchContext = formatSearchResultsForPrompt(allResults);
+
+      // 2. Start 5 parallel candidate streams WITH search context
       const streams = angles.map((angle, index) =>
         generateCandidate(
           index,
@@ -126,12 +178,12 @@ export async function POST(
       );
 
       // Accumulated content for each candidate
-      const accumulatedContent: string[] = ['', '', ''];
-      const candidateErrors: boolean[] = [false, false, false];
+      const accumulatedContent: string[] = new Array(angles.length).fill('');
+      const candidateErrors: boolean[] = new Array(angles.length).fill(false);
 
-      // Drain all 3 streams in parallel
+      // Drain all candidate streams in parallel
       await Promise.all(
-        streams.map(async ({ index, angle, result }) => {
+        streams.map(async ({ index, result }) => {
           try {
             for await (const part of result.fullStream) {
               switch (part.type) {
@@ -154,10 +206,8 @@ export async function POST(
                   }
                   break;
                 }
-                // tool-result, finish, etc. — no action needed
               }
             }
-            // Send done status for this candidate
             await send('candidate', {
               index,
               chunk: '',
@@ -191,7 +241,7 @@ export async function POST(
         label: string;
         content: string;
       }[] = [];
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < angles.length; i++) {
         if (!candidateErrors[i] && accumulatedContent[i].trim().length > 0) {
           candidatesForEval.push({
             index: i,
@@ -213,7 +263,6 @@ export async function POST(
           })),
         );
       } catch {
-        // Evaluation failed — select first candidate as default
         evaluation = {
           criteria: [{ name: '종합', weight: 1 }],
           scores: candidatesForEval.map((c, i) => ({
@@ -235,12 +284,11 @@ export async function POST(
         candidatesForEval.map((c, i) => [c.index, i]),
       );
 
-      // Map evaluation selectedIndex back to original candidate index
       const selectedOriginalIndex =
         candidatesForEval[evaluation.selectedIndex]?.index ?? candidatesForEval[0].index;
 
       // Save simulations to DB
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < angles.length; i++) {
         const failed = candidateErrors[i];
         const evalIdx = originalToEvalIdx.get(i);
         const evalEntry =
@@ -266,24 +314,20 @@ export async function POST(
       // Update project phase to deliver
       updateProject(id, { phase: 'deliver' });
 
-      // Build scores array in original index order for SSE
-      const scoresForSSE = [0, 1, 2].map((i) => {
+      const scoresForSSE = Array.from({ length: angles.length }, (_, i) => {
         const evalIdx = originalToEvalIdx.get(i);
         return evalIdx !== undefined
           ? (evaluation.scores[evalIdx]?.totalScore ?? 0)
           : 0;
       });
 
-      // Send evaluation event
       await send('evaluation', {
         scores: scoresForSSE,
         selectedIndex: selectedOriginalIndex,
         rationale: evaluation.rationale,
       });
 
-      // Send done event
       await send('done', {});
-
       await writer.close();
     } catch (error: unknown) {
       const msg =
@@ -307,5 +351,16 @@ export async function POST(
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
     },
+  });
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function deduplicateByUrl(results: SearchResult[]): SearchResult[] {
+  const seen = new Set<string>();
+  return results.filter((r) => {
+    if (!r.url || seen.has(r.url)) return false;
+    seen.add(r.url);
+    return true;
   });
 }

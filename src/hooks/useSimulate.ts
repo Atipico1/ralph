@@ -64,6 +64,8 @@ export function useSimulate(projectId: string): UseSimulateReturn {
     { content: '', status: 'idle' },
     { content: '', status: 'idle' },
     { content: '', status: 'idle' },
+    { content: '', status: 'idle' },
+    { content: '', status: 'idle' },
   ]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
@@ -120,10 +122,6 @@ export function useSimulate(projectId: string): UseSimulateReturn {
   }, []);
 
   useEffect(() => {
-    // Guard against React Strict Mode double-fire (prevents duplicate API calls)
-    if (startedRef.current) return;
-    startedRef.current = true;
-
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -177,7 +175,7 @@ export function useSimulate(projectId: string): UseSimulateReturn {
         }
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === 'AbortError') {
-          // Intentional abort — not an error
+          // Cleanup abort — not an error, Strict Mode will re-mount and retry
           return;
         }
         const errorMessage =

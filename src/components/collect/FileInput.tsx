@@ -141,28 +141,32 @@ export default function FileInput({ onUpload, disabled }: FileInputProps) {
 
     return (
       <div className="flex w-full flex-col gap-4">
-        <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm">
-          <div className="mb-2 flex items-center gap-2">
-            <svg
-              className="h-5 w-5 text-green-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-            <span className="text-sm font-medium text-green-800">
-              업로드 완료
-            </span>
+        <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50/50 p-5 shadow-sm">
+          <div className="mb-3 flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
+              <svg
+                className="h-4.5 w-4.5 text-emerald-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <div>
+              <span className="text-sm font-semibold text-emerald-800">
+                업로드 완료
+              </span>
+              <p className="text-xs text-emerald-600">{uploadResult.filename}</p>
+            </div>
           </div>
-          <p className="text-sm text-green-700">{uploadResult.filename}</p>
           {resultPreview && (
-            <p className="mt-2 rounded-lg bg-white/60 p-3 text-xs leading-relaxed text-gray-600">
+            <p className="rounded-xl bg-white/70 p-3.5 text-xs leading-relaxed text-text-secondary">
               {truncateText(resultPreview, 200)}
             </p>
           )}
@@ -187,14 +191,14 @@ export default function FileInput({ onUpload, disabled }: FileInputProps) {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 transition duration-200 ease-out ${
+        className={`group flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 transition-all duration-200 ${
           disabled || isUploading
-            ? 'cursor-not-allowed border-gray-200 bg-gray-50 opacity-50'
+            ? 'cursor-not-allowed border-border-default bg-surface-secondary opacity-50'
             : isDragOver
-              ? 'border-blue-500 bg-blue-50'
+              ? 'border-zinc-400 bg-zinc-50 shadow-lg shadow-zinc-900/10'
               : selectedFile
-                ? 'border-blue-300 bg-blue-50/50'
-                : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50/30'
+                ? 'border-zinc-300 bg-zinc-50/30'
+                : 'border-border-default bg-surface-primary hover:border-zinc-300 hover:bg-zinc-50 hover:shadow-md hover:shadow-zinc-900/5'
         }`}
       >
         <input
@@ -208,10 +212,10 @@ export default function FileInput({ onUpload, disabled }: FileInputProps) {
 
         {selectedFile ? (
           /* File selected state */
-          <div className="flex w-full flex-col items-center gap-3">
+          <div className="flex w-full flex-col items-center gap-4">
             {preview ? (
               /* Image thumbnail */
-              <div className="relative h-24 w-24 overflow-hidden rounded-lg shadow-sm">
+              <div className="relative h-28 w-28 overflow-hidden rounded-xl shadow-md ring-2 ring-zinc-200">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={preview}
@@ -221,15 +225,15 @@ export default function FileInput({ onUpload, disabled }: FileInputProps) {
               </div>
             ) : (
               /* File type icon */
-              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gray-100 text-2xl">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 text-2xl shadow-sm">
                 {getFileIcon(selectedFile.type)}
               </div>
             )}
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-semibold text-text-primary">
                 {selectedFile.name}
               </p>
-              <p className="mt-0.5 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-text-tertiary">
                 {formatFileSize(selectedFile.size)}
               </p>
             </div>
@@ -239,17 +243,17 @@ export default function FileInput({ onUpload, disabled }: FileInputProps) {
                 e.stopPropagation();
                 handleRemoveFile();
               }}
-              className="text-xs text-gray-400 transition hover:text-red-500"
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-text-tertiary transition-all duration-200 hover:bg-red-50 hover:text-red-500"
             >
               파일 변경
             </button>
           </div>
         ) : (
           /* Empty state */
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 transition-colors duration-200 group-hover:bg-zinc-200">
               <svg
-                className="h-6 w-6 text-gray-400"
+                className="h-7 w-7 text-zinc-400 transition-colors duration-200 group-hover:text-zinc-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -263,10 +267,10 @@ export default function FileInput({ onUpload, disabled }: FileInputProps) {
               </svg>
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-700">
+              <p className="text-sm font-semibold text-text-primary">
                 파일을 드래그하거나 클릭하여 업로드
               </p>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1.5 text-xs text-text-tertiary">
                 PDF, 이미지, 텍스트 (최대 10MB)
               </p>
             </div>
@@ -276,7 +280,10 @@ export default function FileInput({ onUpload, disabled }: FileInputProps) {
 
       {/* Error message */}
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700">
+          <svg className="h-4 w-4 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
           {error}
         </div>
       )}
@@ -286,7 +293,7 @@ export default function FileInput({ onUpload, disabled }: FileInputProps) {
         type="button"
         onClick={handleUpload}
         disabled={!selectedFile || disabled || isUploading}
-        className="self-end rounded-xl bg-blue-600 px-8 py-3 text-base font-medium text-white shadow-sm transition duration-200 ease-out hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+        className="group/btn relative self-end overflow-hidden rounded-2xl bg-zinc-900 px-8 py-3.5 text-base font-medium text-text-inverse shadow-md shadow-zinc-900/15 transition-all duration-200 hover:bg-zinc-800 hover:shadow-lg hover:shadow-zinc-900/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:hover:brightness-100 disabled:active:scale-100"
       >
         {isUploading ? (
           <span className="flex items-center gap-2">
@@ -294,7 +301,10 @@ export default function FileInput({ onUpload, disabled }: FileInputProps) {
             업로드 중...
           </span>
         ) : (
-          '업로드'
+          <>
+            <span className="relative z-10">업로드</span>
+            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-500 group-hover/btn:translate-x-full" />
+          </>
         )}
       </button>
     </div>

@@ -43,19 +43,19 @@ export default function ConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
-        className="relative mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl animate-modal-enter"
+        className="relative mx-4 w-full max-w-[360px] rounded-2xl bg-white p-6 shadow-2xl animate-modal-enter"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Title */}
         <h2
           id="confirm-dialog-title"
-          className="mb-2 text-base font-semibold text-gray-900"
+          className="mb-2 text-[17px] font-semibold text-zinc-900"
         >
           상담 나가기
         </h2>
 
         {/* Message */}
-        <p className="mb-6 text-sm leading-relaxed text-gray-600">
+        <p className="mb-6 text-[14px] leading-relaxed text-zinc-500">
           진행 중인 상담이 있습니다. 나가시겠습니까?
         </p>
 
@@ -64,14 +64,14 @@ export default function ConfirmDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="min-h-[44px] rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 active:bg-gray-100"
+            className="min-h-[44px] cursor-pointer rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-[14px] font-medium text-zinc-600 transition-all duration-200 hover:bg-zinc-50 active:scale-[0.97]"
           >
             취소
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="min-h-[44px] rounded-xl bg-red-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-600 active:bg-red-700"
+            className="min-h-[44px] cursor-pointer rounded-xl bg-zinc-900 px-5 py-2.5 text-[14px] font-semibold text-white transition-all duration-200 hover:bg-zinc-800 active:scale-[0.97]"
           >
             나가기
           </button>

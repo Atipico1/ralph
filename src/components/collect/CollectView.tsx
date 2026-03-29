@@ -69,9 +69,9 @@ export default function CollectView({
   const isFirstQuestion = questionCount <= 0;
 
   return (
-    <main className="flex min-h-screen flex-col md:flex-row">
+    <main className="flex min-h-screen flex-col bg-surface-secondary/30 md:flex-row">
       {/* Left area: question + input + nav */}
-      <div className="flex min-h-screen flex-1 flex-col px-4 py-8 pb-16 md:px-8 md:pb-8 lg:px-16">
+      <div className="flex min-h-screen flex-1 flex-col px-5 py-8 pb-20 md:px-10 md:pb-8 lg:px-20">
         {/* Progress bar */}
         <div className="mx-auto w-full max-w-xl">
           <ProgressBar
@@ -81,19 +81,25 @@ export default function CollectView({
         </div>
 
         {/* Question area (centered vertically) */}
-        <div className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center">
+        <div className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center py-8">
           {/* Error */}
           {error && (
-            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mb-6 flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50/80 px-5 py-3.5 text-sm text-red-700 shadow-sm">
+              <svg className="h-4 w-4 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
               {error}
             </div>
           )}
 
           {/* Loading state (between questions) */}
           {isLoading && !currentQuestion && (
-            <div className="flex flex-col items-center gap-4 py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
-              <p className="text-sm text-gray-500">생각하고 있어요...</p>
+            <div className="flex flex-col items-center gap-5 py-16">
+              <div className="relative">
+                <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-surface-tertiary border-t-zinc-900" />
+                <div className="absolute inset-0 h-10 w-10 animate-pulse-soft rounded-full bg-zinc-200/50 blur-md" />
+              </div>
+              <p className="text-sm font-medium text-text-tertiary">생각하고 있어요...</p>
             </div>
           )}
 
@@ -104,7 +110,7 @@ export default function CollectView({
               className="animate-question-enter space-y-8"
             >
               {/* Question text */}
-              <h2 className="text-2xl font-semibold leading-relaxed text-gray-900 sm:text-3xl">
+              <h2 className="text-2xl font-semibold leading-tight text-text-primary sm:text-3xl">
                 {currentQuestion.question}
               </h2>
 
@@ -141,8 +147,8 @@ export default function CollectView({
 
               {/* Loading indicator during request */}
               {isLoading && (
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-blue-500" />
+                <div className="flex items-center gap-2.5 text-sm text-text-tertiary">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-surface-tertiary border-t-zinc-600" />
                   <span>다음 질문을 준비하고 있어요...</span>
                 </div>
               )}
@@ -151,8 +157,9 @@ export default function CollectView({
 
           {/* No question and not loading — initial empty state */}
           {!currentQuestion && !isLoading && !error && (
-            <div className="flex flex-col items-center gap-4 py-12">
-              <p className="text-gray-500">질문을 불러오는 중입니다...</p>
+            <div className="flex flex-col items-center gap-5 py-16">
+              <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-surface-tertiary border-t-zinc-900" />
+              <p className="text-sm font-medium text-text-tertiary">질문을 불러오는 중입니다...</p>
             </div>
           )}
         </div>

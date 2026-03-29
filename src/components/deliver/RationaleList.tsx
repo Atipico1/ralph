@@ -24,20 +24,24 @@ export default function RationaleList({ rationale }: RationaleListProps) {
 
   return (
     <section className="w-full">
-      <h3 className="mb-3 text-sm font-semibold text-gray-700">
-        왜 이게 좋은지:
-      </h3>
-      <ul className="space-y-2">
-        {bullets.map((bullet, i) => (
-          <li
-            key={`rationale-${i}`}
-            className="flex items-start gap-2.5 text-sm leading-relaxed text-gray-600"
-          >
-            <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-blue-400" />
-            <span>{bullet}</span>
-          </li>
-        ))}
-      </ul>
+      <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-slate-50/80 p-5 md:p-6">
+        <h3 className="mb-4 text-[13px] font-semibold uppercase tracking-widest text-zinc-400">
+          추천 이유
+        </h3>
+        <ul className="space-y-3">
+          {bullets.map((bullet, i) => (
+            <li
+              key={`rationale-${i}`}
+              className="flex items-start gap-3 text-[15px] leading-relaxed text-gray-600"
+            >
+              <span className="mt-[7px] flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md bg-zinc-100 text-[11px] font-semibold text-zinc-700">
+                {i + 1}
+              </span>
+              <span className="pt-[1px]">{bullet}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }

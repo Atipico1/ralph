@@ -18,23 +18,49 @@ export default function NavigationButtons({
   const isPreviousDisabled = !canGoBack || isFirstQuestion;
 
   return (
-    <div className="flex items-center justify-between pt-4">
+    <div className="flex items-center justify-between border-t border-border-subtle pt-5">
       <button
         type="button"
         onClick={onPrevious}
         disabled={isPreviousDisabled}
-        className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-500"
+        className="group flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-medium text-text-secondary transition-all duration-200 hover:bg-surface-tertiary hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-secondary"
       >
-        ← 이전
+        <svg
+          className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+        이전
       </button>
 
       <button
         type="button"
         onClick={onSkip}
         disabled={isLoading}
-        className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-500"
+        className="group flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-medium text-text-secondary transition-all duration-200 hover:bg-surface-tertiary hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-secondary"
       >
-        건너뛰기 →
+        건너뛰기
+        <svg
+          className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5l7 7-7 7"
+          />
+        </svg>
       </button>
     </div>
   );

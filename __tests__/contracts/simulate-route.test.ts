@@ -170,7 +170,7 @@ function setupDefaultMocks() {
     }),
   );
 
-  // Mock 3 parallel candidates
+  // Mock 5 parallel candidates
   mockGenerateCandidate.mockImplementation(
     (
       index: number,
@@ -198,12 +198,16 @@ function setupDefaultMocks() {
       { candidateIndex: 0, criteriaScores: [85, 80], totalScore: 82.5 },
       { candidateIndex: 1, criteriaScores: [75, 85], totalScore: 80 },
       { candidateIndex: 2, criteriaScores: [70, 75], totalScore: 72.5 },
+      { candidateIndex: 3, criteriaScores: [68, 72], totalScore: 70 },
+      { candidateIndex: 4, criteriaScores: [65, 70], totalScore: 67.5 },
     ],
     selectedIndex: 0,
     rationale: [
       '감성적 접근이 가장 적합합니다.',
       '실용적이나 감성 부족.',
       '창의적이나 목적에서 벗어남.',
+      '전문적이나 딱딱한 톤.',
+      '스토리텔링이 흥미롭지만 구조 부족.',
     ],
   });
 }
@@ -288,9 +292,9 @@ describe('POST /api/projects/[id]/simulate (contract tests)', () => {
       selectedIndex: number;
       rationale: string[];
     };
-    expect(evalData.scores).toHaveLength(3);
+    expect(evalData.scores).toHaveLength(5);
     expect(evalData.selectedIndex).toBe(0);
-    expect(evalData.rationale).toHaveLength(3);
+    expect(evalData.rationale).toHaveLength(5);
 
     // Should have done event
     const doneEvents = events.filter((e) => e.event === 'done');
@@ -323,15 +327,15 @@ describe('POST /api/projects/[id]/simulate (contract tests)', () => {
         e.event === 'candidate' &&
         (e.data as { status: string }).status === 'done',
     );
-    expect(doneCandidate).toHaveLength(3);
+    expect(doneCandidate).toHaveLength(5);
   });
 
   // ── DB interactions ─────────────────────────────────────────────────────
 
-  it('creates 3 simulation records', async () => {
+  it('creates 5 simulation records', async () => {
     const response = await POST(makeRequest(), makeParams('test-id'));
     await response.text();
-    expect(mockCreateSimulation).toHaveBeenCalledTimes(3);
+    expect(mockCreateSimulation).toHaveBeenCalledTimes(5);
   });
 
   it('saves simulations with correct round', async () => {
@@ -445,8 +449,8 @@ describe('POST /api/projects/[id]/simulate (contract tests)', () => {
     const doneEvents = events.filter((e) => e.event === 'done');
     expect(doneEvents).toHaveLength(1);
 
-    // Should still create 3 simulation records (failed one with empty content)
-    expect(mockCreateSimulation).toHaveBeenCalledTimes(3);
+    // Should still create 5 simulation records (failed one with empty content)
+    expect(mockCreateSimulation).toHaveBeenCalledTimes(5);
   });
 
   // ── Error handling: all candidates fail ─────────────────────────────────
@@ -484,18 +488,18 @@ describe('POST /api/projects/[id]/simulate (contract tests)', () => {
     expect(mockUpdateProject).not.toHaveBeenCalled();
   });
 
-  // ── 3 parallel calls ───────────────────────────────────────────────────
+  // ── 5 parallel calls ───────────────────────────────────────────────────
 
-  it('starts 3 parallel candidate generations', async () => {
+  it('starts 5 parallel candidate generations', async () => {
     const response = await POST(makeRequest(), makeParams('test-id'));
     await response.text();
-    expect(mockGenerateCandidate).toHaveBeenCalledTimes(3);
+    expect(mockGenerateCandidate).toHaveBeenCalledTimes(5);
 
-    // Check indices 0, 1, 2
+    // Check indices 0, 1, 2, 3, 4
     const indices = mockGenerateCandidate.mock.calls.map(
       (c) => c[0] as number,
     );
-    expect(indices).toEqual([0, 1, 2]);
+    expect(indices).toEqual([0, 1, 2, 3, 4]);
   });
 
   it('calls evaluateCandidates after all streams complete', async () => {

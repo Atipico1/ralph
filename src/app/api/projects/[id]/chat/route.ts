@@ -7,15 +7,7 @@ import {
   createCollectedContext,
   updateProject,
 } from '@/db/queries';
-import {
-  extractContext,
-  shouldEndCollectionEarly,
-  generateNextQuestion,
-} from '@/ai/collect';
-import {
-  agenticSearch,
-  formatAgenticResultsForPrompt,
-} from '@/ai/agentic-search';
+import { extractContext } from '@/ai/collect';
 import { safeStringifyOptions } from '@/lib/json-safety';
 
 // ── Request schema ──────────────────────────────────────────────────────────
@@ -25,6 +17,15 @@ const chatBodySchema = z.object({
   optionIndex: z.number().int().min(0).optional(),
   skip: z.boolean().optional(),
 });
+
+// ── Question plan item type ─────────────────────────────────────────────────
+
+interface QuestionPlanItem {
+  question: string;
+  inputType: 'choice' | 'text' | 'yesno' | 'file';
+  options: string[] | null;
+  contextKey: string;
+}
 
 // ── SSE helpers ─────────────────────────────────────────────────────────────
 
@@ -80,6 +81,16 @@ export async function POST(
 
   const personaPrompt = project.personaPrompt;
 
+  // Parse question plan
+  let questionPlan: QuestionPlanItem[] = [];
+  if (project.questionPlan) {
+    try {
+      questionPlan = JSON.parse(project.questionPlan) as QuestionPlanItem[];
+    } catch {
+      questionPlan = [];
+    }
+  }
+
   // Stream response via SSE
   const stream = new ReadableStream({
     async start(controller) {
@@ -107,44 +118,47 @@ export async function POST(
           content: message,
         });
 
-        // 3. Parallel: extract context + agentic search run concurrently
+        // 3. Update question count and send next question IMMEDIATELY
         const newQuestionCount = project.questionCount + 1;
-        const maxReached = newQuestionCount >= project.maxQuestions;
+        updateProject(id, { questionCount: newQuestionCount });
 
-        // Pre-compute context items from existing data for parallel calls
-        const existingContextItems = existingContext.map((c) => ({
-          key: c.key,
-          value: c.value,
-        }));
+        const nextIndex = newQuestionCount; // plan[0] was already shown as first question
+        const maxReached = nextIndex >= questionPlan.length;
 
-        // Launch independent tasks in parallel
-        const extractPromise = isSkip
-          ? Promise.resolve({ contexts: [] as { key: string; value: string }[] })
-          : extractContext(
-              personaPrompt,
-              message,
-              lastAgentQuestion,
-              existingContext.map((c) => c.key),
-            );
+        if (maxReached) {
+          // All questions asked — move to simulate
+          updateProject(id, { phase: 'simulate' });
+        } else {
+          const nextQ = questionPlan[nextIndex];
 
-        const earlyEndPromise = !maxReached
-          ? shouldEndCollectionEarly(
-              personaPrompt,
-              existingContextItems,
-              newQuestionCount,
-              project.maxQuestions,
-            )
-          : Promise.resolve(false);
+          // Save agent message and send question event FIRST (no AI wait)
+          const agentMessage = createMessage({
+            projectId: id,
+            role: 'agent',
+            content: nextQ.question,
+            inputType: nextQ.inputType,
+            options: safeStringifyOptions(nextQ.options),
+          });
 
-        const searchPromise = maxReached
-          ? Promise.resolve({ summary: '', sources: [] as import('@/ai/firecrawl').SearchResult[] })
-          : agenticSearch(existingContextItems, message);
+          send('question', {
+            question: nextQ.question,
+            inputType: nextQ.inputType,
+            options: nextQ.options,
+            questionCount: newQuestionCount,
+            messageId: agentMessage.id,
+          });
+        }
 
-        const [extracted, earlyEnd, agenticResult] = await Promise.all([
-          extractPromise,
-          earlyEndPromise,
-          searchPromise,
-        ]);
+        // 4. Extract context AFTER sending the question (non-blocking UX)
+        let extracted = { contexts: [] as { key: string; value: string }[] };
+        if (!isSkip && lastAgentMessage) {
+          extracted = await extractContext(
+            personaPrompt,
+            message,
+            lastAgentQuestion,
+            existingContext.map((c) => c.key),
+          );
+        }
 
         // Save extracted contexts to DB
         if (extracted.contexts.length > 0 && lastAgentMessage) {
@@ -158,63 +172,12 @@ export async function POST(
           }
         }
 
-        // Send context event
+        // Send context event after extraction
         send('context', { contexts: extracted.contexts });
 
-        // Update question count
-        updateProject(id, { questionCount: newQuestionCount });
-
-        // Check if done
-        if (maxReached || earlyEnd) {
-          updateProject(id, { phase: 'simulate' });
+        if (maxReached) {
           send('done', { done: true, phase: 'simulate' });
-          controller.close();
-          return;
         }
-
-        // Build context items including newly extracted ones
-        const allContextItems = [
-          ...existingContextItems,
-          ...extracted.contexts,
-        ];
-
-        const webSearchContext = formatAgenticResultsForPrompt(agenticResult);
-
-        // Generate next question
-        const conversationHistory = [
-          ...existingMessages.map((m) => ({
-            role: m.role as 'agent' | 'user',
-            content: m.content,
-          })),
-          { role: 'user' as const, content: message },
-        ];
-
-        const nextQuestion = await generateNextQuestion(
-          personaPrompt,
-          conversationHistory,
-          allContextItems,
-          newQuestionCount,
-          project.maxQuestions,
-          webSearchContext || undefined,
-        );
-
-        // 9. Save agent message
-        const agentMessage = createMessage({
-          projectId: id,
-          role: 'agent',
-          content: nextQuestion.question,
-          inputType: nextQuestion.inputType,
-          options: safeStringifyOptions(nextQuestion.options),
-        });
-
-        // Send final structured question event
-        send('question', {
-          question: nextQuestion.question,
-          inputType: nextQuestion.inputType,
-          options: nextQuestion.options,
-          questionCount: newQuestionCount,
-          messageId: agentMessage.id,
-        });
 
         controller.close();
       } catch (error: unknown) {

@@ -1,4 +1,4 @@
-import { streamText, generateText, Output, tool, NoObjectGeneratedError } from 'ai';
+import { streamText, generateText, Output, tool } from 'ai';
 import { z } from 'zod';
 import { simulationModel, evaluationModel } from '@/ai/providers';
 
@@ -15,7 +15,7 @@ export const evaluationSchema = z.object({
   ),
   scores: z.array(
     z.object({
-      candidateIndex: z.number().describe('후보 인덱스 (0, 1, 2)'),
+      candidateIndex: z.number().describe('후보 인덱스'),
       criteriaScores: z
         .array(z.number())
         .describe('각 기준별 점수 (0~100)'),
@@ -57,6 +57,18 @@ export function getApproachAngles(_domain: string | null): ApproachAngle[] {
       instruction:
         '창의적이고 차별화된 방향으로 작성하세요. ' +
         '독특한 구성, 예상치 못한 관점, 참신한 아이디어로 작성합니다.',
+    },
+    {
+      label: '전문적 접근',
+      instruction:
+        '전문성과 신뢰감을 강조하는 방향으로 작성하세요. ' +
+        '업계 용어, 전문 지식, 체계적인 분석을 포함합니다.',
+    },
+    {
+      label: '스토리텔링 접근',
+      instruction:
+        '내러티브 구조로 작성하세요. ' +
+        '서사적 흐름, 구체적 에피소드, 기승전결 구조를 활용합니다.',
     },
   ];
 }
@@ -139,6 +151,7 @@ function buildEvaluationPrompt(
   domain: string | null,
   contexts: CollectedContextItem[],
   candidates: { label: string; content: string }[],
+  perspectiveInstruction?: string,
 ): { system: string; prompt: string } {
   const contextText = contexts
     .map((c) => `- ${c.key}: ${c.value}`)
@@ -151,9 +164,13 @@ function buildEvaluationPrompt(
     )
     .join('\n');
 
+  const perspectiveSection = perspectiveInstruction
+    ? `\n[평가 관점]\n- ${perspectiveInstruction}\n`
+    : '';
+
   return {
     system: `당신은 전문 평가자입니다. 주어진 도메인과 맥락에 맞는 평가 기준을 스스로 도출하고, 각 후보를 공정하게 평가합니다.
-
+${perspectiveSection}
 [평가 규칙]
 - 도메인(${domain ?? '일반'})에 적합한 평가 기준 3~5개를 동적으로 생성하세요.
 - 각 기준에 가중치를 부여하세요 (합계 1.0).
@@ -161,7 +178,7 @@ function buildEvaluationPrompt(
 - 가중 합산으로 총점을 계산하세요.
 - 최고점 후보를 selectedIndex로 선택하세요.
 - 각 후보에 대해 한 줄 평가(rationale)를 작성하세요.`,
-    prompt: `수집된 맥락:\n${contextText}\n\n${candidateText}\n\n위 3개 후보를 평가해주세요.`,
+    prompt: `수집된 맥락:\n${contextText}\n\n${candidateText}\n\n위 ${candidates.length}개 후보를 평가해주세요.`,
   };
 }
 
@@ -202,31 +219,71 @@ export async function evaluateCandidates(
   contexts: CollectedContextItem[],
   candidates: { label: string; content: string }[],
 ): Promise<EvaluationResult> {
-  const { system, prompt } = buildEvaluationPrompt(
-    domain,
-    contexts,
-    candidates,
-  );
+  const candidateCount = candidates.length;
 
-  try {
-    const { experimental_output: output } = await generateText({
-      model: evaluationModel(),
-      experimental_output: Output.object({ schema: evaluationSchema }),
-      system,
-      prompt,
-    });
+  // 3 different evaluation perspectives
+  const perspectives = [
+    {
+      name: 'critical',
+      instruction: '엄격한 평가자로서, 각 후보의 약점과 개선점에 집중하여 가장 완성도 높은 후보를 선택하세요.',
+    },
+    {
+      name: 'practical',
+      instruction: '실용적 평가자로서, 사용자가 실제로 활용하기에 가장 적합한 후보를 선택하세요.',
+    },
+    {
+      name: 'holistic',
+      instruction: '균형 잡힌 평가자로서, 창의성, 완성도, 적합성을 종합적으로 고려하여 최적의 후보를 선택하세요.',
+    },
+  ];
 
-    if (!output) {
-      return buildFallbackEvaluation(candidates.length);
+  const evaluationPromises = perspectives.map(async (perspective) => {
+    const { system, prompt } = buildEvaluationPrompt(domain, contexts, candidates, perspective.instruction);
+
+    try {
+      const { experimental_output: output } = await generateText({
+        model: evaluationModel(),
+        experimental_output: Output.object({ schema: evaluationSchema }),
+        system,
+        prompt,
+      });
+      return output ?? null;
+    } catch (error: unknown) {
+      console.error(`[evaluateCandidates] ${perspective.name} eval failed:`, error);
+      return null;
     }
+  });
 
-    return output;
-  } catch (error: unknown) {
-    if (NoObjectGeneratedError.isInstance(error)) {
-      return buildFallbackEvaluation(candidates.length);
-    }
-    throw error;
+  const results = await Promise.all(evaluationPromises);
+  const validResults = results.filter((r): r is EvaluationResult => r !== null);
+
+  if (validResults.length === 0) {
+    return buildFallbackEvaluation(candidateCount);
   }
+
+  // Majority vote on selectedIndex
+  const votes = new Map<number, number>();
+  for (const r of validResults) {
+    votes.set(r.selectedIndex, (votes.get(r.selectedIndex) ?? 0) + 1);
+  }
+
+  let winnerIndex = validResults[0].selectedIndex;
+  let maxVotes = 0;
+  for (const [idx, count] of votes) {
+    if (count > maxVotes) {
+      maxVotes = count;
+      winnerIndex = idx;
+    }
+  }
+
+  // Use the evaluation result that picked the winner (for rationale/scores)
+  const winningEval = validResults.find((r) => r.selectedIndex === winnerIndex) ?? validResults[0];
+
+  // Override selectedIndex with majority vote result
+  return {
+    ...winningEval,
+    selectedIndex: winnerIndex,
+  };
 }
 
 // ---------------------------------------------------------------------------

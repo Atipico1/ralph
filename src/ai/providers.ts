@@ -52,5 +52,5 @@ export function simulationModel() {
 
 /** Simulation evaluation */
 export function evaluationModel() {
-  return getOpenRouter()('google/gemini-3.1-pro-preview');
+  return getOpenRouter()('openai/gpt-5.4-mini');
 }
