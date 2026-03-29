@@ -39,7 +39,7 @@ export const messages = sqliteTable('messages', {
     .references(() => projects.id, { onDelete: 'cascade' }),
   role: text('role', { enum: ['agent', 'user'] }).notNull(),
   content: text('content').notNull(),
-  inputType: text('input_type', { enum: ['choice', 'text', 'yesno'] }),
+  inputType: text('input_type', { enum: ['choice', 'text', 'yesno', 'file'] }),
   options: text('options'),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
@@ -116,3 +116,28 @@ export const revisionOptions = sqliteTable('revision_options', {
 
 export type RevisionOption = typeof revisionOptions.$inferSelect;
 export type NewRevisionOption = typeof revisionOptions.$inferInsert;
+
+// ── uploaded_files ────────────────────────────────────────────────────────────
+
+export const uploadedFiles = sqliteTable('uploaded_files', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => nanoid()),
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  messageId: text('message_id')
+    .notNull()
+    .references(() => messages.id, { onDelete: 'cascade' }),
+  filename: text('filename').notNull(),
+  mimeType: text('mime_type').notNull(),
+  filePath: text('file_path').notNull(),
+  extractedText: text('extracted_text'),
+  analysis: text('analysis'),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+export type UploadedFile = typeof uploadedFiles.$inferSelect;
+export type NewUploadedFile = typeof uploadedFiles.$inferInsert;

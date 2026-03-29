@@ -46,9 +46,11 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         inputType: (lastAgentMessage.inputType ?? 'text') as
           | 'choice'
           | 'text'
-          | 'yesno',
+          | 'yesno'
+          | 'file',
         options: parsedOptions,
         questionCount: project.questionCount,
+        messageId: lastAgentMessage.id,
       };
     }
 

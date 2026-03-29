@@ -6,6 +6,7 @@ import { useCollect, type Question, type ContextItem } from '@/hooks/useCollect'
 import ChoiceInput from './ChoiceInput';
 import TextInput from './TextInput';
 import YesNoInput from './YesNoInput';
+import FileInput from './FileInput';
 import ProgressBar from './ProgressBar';
 import ClipboardPanel from './ClipboardPanel';
 import NavigationButtons from './NavigationButtons';
@@ -31,10 +32,11 @@ export default function CollectView({
     error,
     contexts,
     sendMessage,
+    uploadFile,
     goBack,
     canGoBack,
     skip,
-  } = useCollect(projectId, initialQuestion);
+  } = useCollect(projectId, initialQuestion, initialQuestion?.messageId);
 
   // Merge initial DB contexts with SSE-collected contexts (no duplicates by key)
   const allContexts = useMemo(
@@ -126,6 +128,13 @@ export default function CollectView({
               {currentQuestion.inputType === 'yesno' && (
                 <YesNoInput
                   onSubmit={(msg) => handleSubmit(msg)}
+                  disabled={isLoading}
+                />
+              )}
+
+              {currentQuestion.inputType === 'file' && (
+                <FileInput
+                  onUpload={uploadFile}
                   disabled={isLoading}
                 />
               )}

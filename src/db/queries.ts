@@ -6,6 +6,7 @@ import {
   collectedContext,
   simulations,
   revisionOptions,
+  uploadedFiles,
   type NewProject,
   type Project,
   type NewMessage,
@@ -16,6 +17,8 @@ import {
   type Simulation,
   type NewRevisionOption,
   type RevisionOption,
+  type NewUploadedFile,
+  type UploadedFile,
 } from './schema';
 
 // ── projects ─────────────────────────────────────────────────────────────────
@@ -191,4 +194,38 @@ export function deleteRevisionOptionsByProject(projectId: string): void {
   db.delete(revisionOptions)
     .where(eq(revisionOptions.projectId, projectId))
     .run();
+}
+
+// ── uploaded_files ────────────────────────────────────────────────────────────
+
+export function createUploadedFile(
+  data: Omit<NewUploadedFile, 'id' | 'createdAt'> & { id?: string }
+): UploadedFile {
+  const row = db.insert(uploadedFiles).values(data).returning().get();
+  return row;
+}
+
+export function updateUploadedFile(
+  id: string,
+  data: Partial<Omit<NewUploadedFile, 'id' | 'createdAt'>>
+): void {
+  db.update(uploadedFiles).set(data).where(eq(uploadedFiles.id, id)).run();
+}
+
+export function getUploadedFilesByProject(projectId: string): UploadedFile[] {
+  return db
+    .select()
+    .from(uploadedFiles)
+    .where(eq(uploadedFiles.projectId, projectId))
+    .orderBy(asc(uploadedFiles.createdAt))
+    .all();
+}
+
+export function getUploadedFilesByMessage(messageId: string): UploadedFile[] {
+  return db
+    .select()
+    .from(uploadedFiles)
+    .where(eq(uploadedFiles.messageId, messageId))
+    .orderBy(asc(uploadedFiles.createdAt))
+    .all();
 }

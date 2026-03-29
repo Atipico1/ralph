@@ -178,7 +178,7 @@ export async function POST(
         );
 
         // 8. Save agent message
-        createMessage({
+        const agentMessage = createMessage({
           projectId: id,
           role: 'agent',
           content: nextQuestion.question,
@@ -194,6 +194,7 @@ export async function POST(
           inputType: nextQuestion.inputType,
           options: nextQuestion.options,
           questionCount: newQuestionCount,
+          messageId: agentMessage.id,
         });
 
         controller.close();

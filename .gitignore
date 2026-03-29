@@ -16,3 +16,6 @@ local.db
 *.db-shm
 *.db-wal
 tsconfig.tsbuildinfo
+
+# Uploaded files
+uploads/

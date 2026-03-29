@@ -7,9 +7,18 @@ import { parseSSEFrames, type SSEFrame } from '@/lib/sse-parser';
 
 export interface Question {
   question: string;
-  inputType: 'choice' | 'text' | 'yesno';
+  inputType: 'choice' | 'text' | 'yesno' | 'file';
   options: string[] | null;
   questionCount: number;
+  messageId?: string;
+}
+
+export interface UploadResult {
+  fileId: string;
+  filename: string;
+  mimeType: string;
+  extractedText?: string;
+  analysis?: string;
 }
 
 export interface ContextItem {
@@ -23,9 +32,10 @@ interface SSEContextEvent {
 
 interface SSEQuestionEvent {
   question: string;
-  inputType: 'choice' | 'text' | 'yesno';
+  inputType: 'choice' | 'text' | 'yesno' | 'file';
   options: string[] | null;
   questionCount: number;
+  messageId?: string;
 }
 
 interface SSEDoneEvent {
@@ -44,10 +54,12 @@ export interface UseCollectReturn {
   error: string | null;
   contexts: ContextItem[];
   sendMessage: (message: string, optionIndex?: number) => Promise<void>;
+  uploadFile: (file: File) => Promise<UploadResult>;
   questionHistory: Question[];
   goBack: () => void;
   canGoBack: boolean;
   skip: () => Promise<void>;
+  lastAgentMessageId: string | null;
 }
 
 // ── Hook ────────────────────────────────────────────────────────────────────
@@ -55,6 +67,7 @@ export interface UseCollectReturn {
 export function useCollect(
   projectId: string,
   initialQuestion: Question | null,
+  initialMessageId?: string | null,
 ): UseCollectReturn {
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(
     initialQuestion,
@@ -64,6 +77,9 @@ export function useCollect(
   const [error, setError] = useState<string | null>(null);
   const [contexts, setContexts] = useState<ContextItem[]>([]);
   const abortRef = useRef<AbortController | null>(null);
+  const [lastAgentMessageId, setLastAgentMessageId] = useState<string | null>(
+    initialMessageId ?? null,
+  );
 
   // History tracking
   const [questionHistory, setQuestionHistory] = useState<Question[]>(
@@ -117,8 +133,12 @@ export function useCollect(
                 inputType: parsed.inputType,
                 options: parsed.options,
                 questionCount: parsed.questionCount,
+                messageId: parsed.messageId,
               };
               setCurrentQuestion(newQuestion);
+              if (parsed.messageId) {
+                setLastAgentMessageId(parsed.messageId);
+              }
               // Append to history and move index to latest
               setQuestionHistory((prev) => [...prev, newQuestion]);
               setHistoryIndex((prev) => prev + 1);
@@ -231,6 +251,40 @@ export function useCollect(
     await processStream({ message: '건너뛰기', skip: true });
   }, [isAtLatest, questionHistory.length, processStream]);
 
+  const uploadFile = useCallback(
+    async (file: File): Promise<UploadResult> => {
+      if (!lastAgentMessageId) {
+        throw new Error('메시지 ID를 찾을 수 없습니다.');
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('messageId', lastAgentMessageId);
+
+      const res = await fetch(`/api/projects/${projectId}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const resBody = await res.json().catch(() => ({
+          error: '업로드에 실패했습니다.',
+        }));
+        throw new Error(
+          (resBody as { error?: string }).error ?? '업로드에 실패했습니다.',
+        );
+      }
+
+      const result = (await res.json()) as UploadResult;
+
+      // After upload, send a chat message to trigger next question
+      await processStream({ message: `[파일 업로드] ${file.name}` });
+
+      return result;
+    },
+    [projectId, lastAgentMessageId, processStream],
+  );
+
   return {
     currentQuestion,
     isLoading,
@@ -238,9 +292,11 @@ export function useCollect(
     error,
     contexts,
     sendMessage,
+    uploadFile,
     questionHistory,
     goBack,
     canGoBack,
     skip,
+    lastAgentMessageId,
   };
 }
