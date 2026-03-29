@@ -455,3 +455,24 @@ Started: Sun Mar 29 11:57:30 KST 2026
 
 ## 03-29 16:37 US-017 DONE
 ---
+
+## 2026-03-29 — US-018
+- Created `src/lib/json-safety.ts`: safeParseOptions + safeStringifyOptions utilities
+  - safeParseOptions: JSON.parse + type validation (must be string[]), returns null on failure
+  - safeStringifyOptions: validates input is string[] before JSON.stringify, returns null on invalid
+- Fixed GET /api/projects/[id]/route.ts: unprotected JSON.parse → safeParseOptions + outer try-catch
+- Fixed POST /api/projects/route.ts: raw JSON.stringify → safeStringifyOptions for DB write
+- Fixed POST /api/projects/[id]/chat/route.ts: raw JSON.stringify → safeStringifyOptions for DB write
+- Fixed /project/[id]/page.tsx: manual try-catch → safeParseOptions
+- All 8 generateText + experimental_output calls already had NoObjectGeneratedError catch + fallback (verified)
+- Tests: 20 new contract tests (167 total), typecheck + lint clean
+- Files: src/lib/json-safety.ts, __tests__/contracts/json-safety.test.ts, 4 modified route/page files
+- Learnings for future iterations:
+  - Use `== null` (loose equality) for null/undefined check on `unknown` type — `!value` catches 0, false, "" too
+  - safeParseOptions pattern: JSON.parse + Array.isArray + .every type check is the right defensive parse pattern
+  - DB write validation (safeStringifyOptions) prevents garbage-in — worth doing even when AI SDK schema validates output
+  - Centralize JSON safety in one utility module rather than scattering try-catch blocks
+---
+
+## 03-29 16:48 US-018 DONE
+---

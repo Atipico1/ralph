@@ -23,7 +23,7 @@ export function safeParseOptions(json: string | null): string[] | null {
  * Returns null if input is not a valid string array.
  */
 export function safeStringifyOptions(options: unknown): string | null {
-  if (!options) return null;
+  if (options == null) return null;
   if (
     !Array.isArray(options) ||
     !options.every((item) => typeof item === 'string')
