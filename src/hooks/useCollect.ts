@@ -43,6 +43,10 @@ export interface UseCollectReturn {
   error: string | null;
   contexts: ContextItem[];
   sendMessage: (message: string, optionIndex?: number) => Promise<void>;
+  questionHistory: Question[];
+  goBack: () => void;
+  canGoBack: boolean;
+  skip: () => Promise<void>;
 }
 
 // ── SSE Line Parser ─────────────────────────────────────────────────────────
@@ -97,8 +101,29 @@ export function useCollect(
   const [contexts, setContexts] = useState<ContextItem[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
-  const sendMessage = useCallback(
-    async (message: string, optionIndex?: number) => {
+  // History tracking
+  const [questionHistory, setQuestionHistory] = useState<Question[]>(
+    initialQuestion ? [initialQuestion] : [],
+  );
+  const [historyIndex, setHistoryIndex] = useState<number>(
+    initialQuestion ? 0 : -1,
+  );
+
+  // Whether the user is viewing the latest question (not navigated back)
+  const isAtLatest = historyIndex === questionHistory.length - 1;
+
+  const canGoBack = historyIndex > 0;
+
+  const goBack = useCallback(() => {
+    if (historyIndex <= 0) return;
+    const newIndex = historyIndex - 1;
+    setHistoryIndex(newIndex);
+    setCurrentQuestion(questionHistory[newIndex]);
+    setError(null);
+  }, [historyIndex, questionHistory]);
+
+  const processStream = useCallback(
+    async (body: Record<string, unknown>) => {
       // Abort any in-flight request
       if (abortRef.current) {
         abortRef.current.abort();
@@ -123,12 +148,16 @@ export function useCollect(
             }
             case 'question': {
               const parsed = JSON.parse(frame.data) as SSEQuestionEvent;
-              setCurrentQuestion({
+              const newQuestion: Question = {
                 question: parsed.question,
                 inputType: parsed.inputType,
                 options: parsed.options,
                 questionCount: parsed.questionCount,
-              });
+              };
+              setCurrentQuestion(newQuestion);
+              // Append to history and move index to latest
+              setQuestionHistory((prev) => [...prev, newQuestion]);
+              setHistoryIndex((prev) => prev + 1);
               break;
             }
             case 'done': {
@@ -153,18 +182,16 @@ export function useCollect(
         const res = await fetch(`/api/projects/${projectId}/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(
-            optionIndex !== undefined ? { message, optionIndex } : { message },
-          ),
+          body: JSON.stringify(body),
           signal: controller.signal,
         });
 
         if (!res.ok) {
-          const body = await res.json().catch(() => ({
+          const resBody = await res.json().catch(() => ({
             error: '요청에 실패했습니다.',
           }));
           throw new Error(
-            (body as { error?: string }).error ?? '요청에 실패했습니다.',
+            (resBody as { error?: string }).error ?? '요청에 실패했습니다.',
           );
         }
 
@@ -201,9 +228,9 @@ export function useCollect(
           // Intentional abort — not an error
           return;
         }
-        const message =
+        const errorMessage =
           err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
-        setError(message);
+        setError(errorMessage);
       } finally {
         setIsLoading(false);
         abortRef.current = null;
@@ -212,5 +239,44 @@ export function useCollect(
     [projectId],
   );
 
-  return { currentQuestion, isLoading, isDone, error, contexts, sendMessage };
+  const sendMessage = useCallback(
+    async (message: string, optionIndex?: number) => {
+      // Reset to latest when answering from history
+      if (!isAtLatest) {
+        const latestIdx = questionHistory.length - 1;
+        setHistoryIndex(latestIdx);
+      }
+
+      const body: Record<string, unknown> =
+        optionIndex !== undefined
+          ? { message, optionIndex }
+          : { message };
+
+      await processStream(body);
+    },
+    [isAtLatest, questionHistory.length, processStream],
+  );
+
+  const skip = useCallback(async () => {
+    // Reset to latest when skipping from history
+    if (!isAtLatest) {
+      const latestIdx = questionHistory.length - 1;
+      setHistoryIndex(latestIdx);
+    }
+
+    await processStream({ message: '건너뛰기', skip: true });
+  }, [isAtLatest, questionHistory.length, processStream]);
+
+  return {
+    currentQuestion,
+    isLoading,
+    isDone,
+    error,
+    contexts,
+    sendMessage,
+    questionHistory,
+    goBack,
+    canGoBack,
+    skip,
+  };
 }

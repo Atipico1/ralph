@@ -19,6 +19,7 @@ import {
 const chatBodySchema = z.object({
   message: z.string().min(1),
   optionIndex: z.number().int().min(0).optional(),
+  skip: z.boolean().optional(),
 });
 
 // ── SSE helpers ─────────────────────────────────────────────────────────────
@@ -51,7 +52,7 @@ export async function POST(
     );
   }
 
-  const { message } = parsed.data;
+  const { message, skip: isSkip } = parsed.data;
 
   // Load project
   const project = getProject(id);
@@ -102,29 +103,34 @@ export async function POST(
           content: message,
         });
 
-        // 3. Extract context from user's response
-        const existingContextKeys = existingContext.map((c) => c.key);
-        const extracted = await extractContext(
-          personaPrompt,
-          message,
-          lastAgentQuestion,
-          existingContextKeys,
-        );
+        // 3. Extract context from user's response (skip if flagged)
+        if (isSkip) {
+          // Skip context extraction — send empty contexts
+          send('context', { contexts: [] });
+        } else {
+          const existingContextKeys = existingContext.map((c) => c.key);
+          const extracted = await extractContext(
+            personaPrompt,
+            message,
+            lastAgentQuestion,
+            existingContextKeys,
+          );
 
-        // Save extracted contexts to DB
-        if (extracted.contexts.length > 0 && lastAgentMessage) {
-          for (const ctx of extracted.contexts) {
-            createCollectedContext({
-              projectId: id,
-              key: ctx.key,
-              value: ctx.value,
-              questionId: lastAgentMessage.id,
-            });
+          // Save extracted contexts to DB
+          if (extracted.contexts.length > 0 && lastAgentMessage) {
+            for (const ctx of extracted.contexts) {
+              createCollectedContext({
+                projectId: id,
+                key: ctx.key,
+                value: ctx.value,
+                questionId: lastAgentMessage.id,
+              });
+            }
           }
-        }
 
-        // Send context event
-        send('context', { contexts: extracted.contexts });
+          // Send context event
+          send('context', { contexts: extracted.contexts });
+        }
 
         // 4. Increment question_count
         const newQuestionCount = project.questionCount + 1;

@@ -1,5 +1,9 @@
 import { notFound } from 'next/navigation';
-import { getProject, getMessagesByProject } from '@/db/queries';
+import {
+  getProject,
+  getMessagesByProject,
+  getCollectedContextByProject,
+} from '@/db/queries';
 import CollectView from '@/components/collect/CollectView';
 import type { Question } from '@/hooks/useCollect';
 
@@ -40,8 +44,20 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
       };
     }
 
+    // Load initial collected contexts from DB
+    const collectedContextRows = getCollectedContextByProject(id);
+    const initialContexts = collectedContextRows.map((c) => ({
+      key: c.key,
+      value: c.value,
+    }));
+
     return (
-      <CollectView projectId={project.id} initialQuestion={initialQuestion} />
+      <CollectView
+        projectId={project.id}
+        initialQuestion={initialQuestion}
+        maxQuestions={project.maxQuestions}
+        initialContexts={initialContexts}
+      />
     );
   }
 
